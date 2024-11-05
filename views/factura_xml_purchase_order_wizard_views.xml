@@ -16,7 +16,8 @@
                     <button string="Cancelar" class="btn-secondary" special="cancel"/>
                 </footer>
             </form>
-        </field>         
+        </field>
     </record>
 </odoo>
+
 

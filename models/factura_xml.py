@@ -4,11 +4,13 @@ from odoo import models, fields, api
 from odoo.exceptions import UserError
 import difflib 
 from datetime import timedelta, datetime
+from dateutil.relativedelta import relativedelta
 
 import base64
 import zipfile
 import io
 import xml.etree.ElementTree as ET
+
 
 class FacturaXML(models.Model):
     _name = 'factura.xml'
@@ -114,11 +116,12 @@ class FacturaXML(models.Model):
         # Ordenar las sugerencias por puntaje
         suggestions = sorted(suggestions, key=lambda x: x['score'], reverse=True)
         return suggestions
- 
+
     def _compute_suggested_purchase_orders(self):
         for record in self:
-            suggestions = []
+            suggestions = self.env['purchase.order']
             if not record.fecha:
+                # Si no hay fecha en la factura, no podemos limitar por fecha
                 continue
 
             # Obtener la fecha de la factura
@@ -128,7 +131,7 @@ class FacturaXML(models.Model):
             start_date = (invoice_date.replace(day=1) - timedelta(days=1)).replace(day=1)
 
             # Calcular el último día del mes posterior
-            next_month = invoice_date.replace(day=28) + timedelta(days=4)
+            next_month = invoice_date.replace(day=28) + timedelta(days=4)  # asegura estar en el siguiente mes
             end_date = (next_month + timedelta(days=31)).replace(day=1) - timedelta(days=1)
 
             # Buscar órdenes de compra dentro del rango de fechas
@@ -156,24 +159,15 @@ class FacturaXML(models.Model):
                 # Coincidencia por monto
                 invoice_total = record.total or 0.0
                 po_total = po.amount_total or 0.0
-                if invoice_total > 0 and abs(invoice_total - po_total) / invoice_total < 0.1:
+                if invoice_total > 0 and abs(invoice_total - po_total) / invoice_total < 0.1:  # 10% de tolerancia
                     score += 2
                 # Coincidencia por fecha (dentro de 7 días)
                 if record.fecha and po.date_order:
                     date_diff = abs((record.fecha - po.date_order.date()).days)
                     if date_diff <= 7:
                         score += 1
-                    # Nueva regla: Coincidencia dentro del mismo mes y año
-                    if record.fecha.month == po.date_order.month and record.fecha.year == po.date_order.year:
-                        score += 2  # Más puntos por estar en el mismo mes y año
-                if score > 0:
-                    suggestions.append({'po': po, 'score': score})
-
-            # Ordenar las sugerencias por puntaje, de mayor a menor
-            suggestions = sorted(suggestions, key=lambda x: x['score'], reverse=True)
-            # Asignar las órdenes de compra sugeridas
-            record.suggested_purchase_order_ids = [s['po'].id for s in suggestions]
-    #xml_file = fields.Binary(string='Archivo XML')
-    #zip_file = fields.Binary(string='Archivo ZIP')
+                if score >= 4:  # Umbral para considerar una sugerencia
+                    suggestions |= po
+            record.suggested_purchase_order_ids = suggestions
 
     
