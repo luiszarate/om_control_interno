@@ -5,7 +5,7 @@
       "reveal": "always",
       "focus": false,
       "panel": "dedicated",
-      "showReuseMessage": true
+      "showReuseMessage": false
     },
     "tasks": [
       {
@@ -25,12 +25,12 @@
         "label": "Copiar a folder Add Ons",
         // The task will launch a shell
         "type": "shell",
-        "command": "ssh erp",
+        "command": "/bin/zsh",
         // Set the shell type
         "options": {
           "shell": {
-            "executable": "zsh",
-            "args": []
+            "executable": "",
+            "args": [""]
           }
         },
         // Mark as a background task to avoid the spinner animation on the terminal tab
@@ -44,10 +44,10 @@
       {
         "label": "Copiar a Servidor",
         "type": "shell",
-        "command": "",
+        "command": "/bin/zsh",
         "options": {
           "shell": {
-            "executable": "zsh",
+            "executable": "",
             "args": []
           }
         },
@@ -60,17 +60,17 @@
       {
         "label": "Restart Server",
         "type": "shell",
-        "command": "",
+        "command": "/bin/zsh",
         "options": {
           "shell": {
-            "executable": "zsh",
+            "executable": "",
             "args": []
           }
         },
-        "isBackground": true,
+        "isBackground": false,
         "problemMatcher": [],
         "presentation": {
-          "group": "my-group"
+          "group": "my-group2"
         }
       }
     ]

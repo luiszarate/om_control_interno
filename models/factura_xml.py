@@ -134,6 +134,7 @@ class FacturaXML(models.Model):
             next_month = invoice_date.replace(day=28) + timedelta(days=4)  # asegura estar en el siguiente mes
             end_date = (next_month + timedelta(days=31)).replace(day=1) - timedelta(days=1)
 
+
             # Buscar órdenes de compra dentro del rango de fechas
             domain = [
                 ('date_order', '>=', start_date),
