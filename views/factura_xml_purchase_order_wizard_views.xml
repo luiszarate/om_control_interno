@@ -1,0 +1,22 @@
+<!-- views/factura_xml_purchase_order_wizard_views.xml -->
+
+<odoo>
+    <record id="view_factura_xml_purchase_order_wizard_form" model="ir.ui.view">
+        <field name="name">factura.xml.purchase.order.wizard.form</field>
+        <field name="model">factura.xml.purchase.order.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Sugerir Órdenes de Compra">
+                <group>
+                    <field name="factura_xml_id" invisible="1"/>
+                    <field name="suggested_purchase_order_ids" widget="many2many_tags" options="{'no_create': True}" readonly="1" nolabel="1"/>
+                    <field name="purchase_order_id" domain="[('id', 'in', suggested_purchase_order_ids)]"/>
+                </group>
+                <footer>
+                    <button string="Vincular" name="action_link_purchase_order" type="object" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>         
+    </record>
+</odoo>
+

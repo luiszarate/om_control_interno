@@ -1,0 +1,8 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_control_interno_mensual,access_control_interno_mensual,model_control_interno_mensual,,1,1,1,1
+access_costos_gastos_line,access_costos_gastos_line,model_costos_gastos_line,,1,1,1,1
+access_factura_xml,access_factura_xml,model_factura_xml,,1,1,1,1
+access_catalogo_cuentas,access_catalogo_cuentas,model_catalogo_cuentas,,1,1,1,1
+access_factura_wizard_xml,access_factura_xml_wizard,model_factura_xml_wizard,,1,1,1,1
+access_factura_xml_purchase_order_wizard,access_factura_xml_purchase_order_wizard,model_factura_xml_purchase_order_wizard,,1,1,1,1
+

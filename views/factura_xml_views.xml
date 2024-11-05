@@ -1,0 +1,93 @@
+<!--views/factura_xml_views.xml
+-->
+
+<odoo>
+    <!-- Vista del asistente para cargar facturas XML -->
+    <record id="view_factura_xml_wizard_form" model="ir.ui.view">
+        <field name="name">factura.xml.wizard.form</field>
+        <field name="model">factura.xml.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Cargar Facturas XML">
+                <group>
+                    <field name="xml_file" filename="filename"/>
+                    <field name="zip_file" filename="filename"/>
+                </group>
+                <footer>
+                    <button name="cargar_facturas_xml" type="object" string="Cargar" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_factura_xml_tree" model="ir.ui.view">
+        <field name="name">factura.xml.tree</field>
+        <field name="model">factura.xml</field>
+        <field name="arch" type="xml">
+            <tree string="Facturas XML">
+                <field name="filename"/>
+                <field name="uuid"/>
+                <field name="folio"/>
+                <field name="fecha"/>
+                <field name="proveedor_id"/>
+                <field name="proveedor_text"/>
+                <field name="rfc"/>
+                <field name="pais_id"/>
+                <field name="subtotal"/>
+                <field name="descuento"/>
+                <field name="moneda_id"/>
+                <field name="tipo_cambio"/>
+                <field name="iva"/>
+                <field name="total"/>
+                <field name="concepto"/>
+                <field name="ordenes_compra_ids"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_factura_xml_form" model="ir.ui.view">
+        <field name="name">factura.xml.form</field>
+        <field name="model">factura.xml</field>
+        <field name="arch" type="xml">
+            <form string="Factura XML">
+                <sheet>
+                    <header>
+                        <field name="state" widget="statusbar" statusbar_visible="draft,validated,cancelled"/>
+                        <button name="action_suggest_purchase_orders" type="object" string="Sugerir Órdenes de Compra" class="btn-primary"/>
+                    </header>
+                    <group>
+                        <field name="filename"/>
+                        <field name="uuid"/>
+                        <field name="folio"/>
+                        <field name="fecha"/>
+                        <field name="proveedor_id"/>
+                        <field name="rfc"/>
+                        <field name="pais_id"/>
+                        <field name="subtotal"/>
+                        <field name="descuento"/>
+                        <field name="moneda_id"/>
+                        <field name="tipo_cambio"/>
+                        <field name="iva"/>
+                        <field name="total"/>
+                        <field name="concepto"/>
+                        <field name="ordenes_compra_ids"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+     <!-- Acción para abrir el asistente -->
+    <record id="action_factura_xml_wizard" model="ir.actions.act_window">
+        <field name="name">Cargar Facturas XML</field>
+        <field name="res_model">factura.xml.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <record id="action_factura_xml" model="ir.actions.act_window">
+        <field name="name">Facturas XML</field>
+        <field name="res_model">factura.xml</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+</odoo>

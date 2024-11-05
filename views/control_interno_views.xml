@@ -1,0 +1,134 @@
+<!--views/control_interno_views.xml
+-->
+
+<odoo>
+    <record id="view_costos_gastos_line_tree" model="ir.ui.view">
+        <field name="name">costos.gastos.line.tree</field>
+        <field name="model">costos.gastos.line</field>
+        <field name="arch" type="xml">
+            <tree string="Costos y Gastos" editable="bottom">
+                <field name="orden_compra_id"/>
+                <field name="fecha_pago"/>
+                <field name="tipo_pago"/>
+                <field name="tipo_comprobante"/>
+                <field name="folio_fiscal"/>
+                <field name="no_comprobante"/>
+                <field name="fecha_comprobante"/>
+                <field name="concepto"/>
+                <field name="proveedor_id"/>
+                <field name="tax_id"/>
+                <field name="country_id"/>
+                <field name="importe"/>
+                <field name="descuento"/>
+                <field name="moneda_id"/>
+                <field name="tipo_cambio"/>
+                <field name="importe_mxn"/>
+                <field name="iva"/>
+                <field name="total"/>
+                <field name="retencion_iva"/>
+                <field name="otras_retenciones"/>
+                <field name="pedimento_no"/>
+                <field name="iva_pedimento"/>
+                <field name="otros_impuestos_pedimento"/>
+                <field name="division_subcuentas"/>
+                <field name="importe_subcuenta"/>
+                <field name="descuento_subcuenta"/>
+                <field name="total_subcuenta_sin_iva"/>
+                <field name="descripcion_cuenta"/>
+                <field name="cuenta_id"/>
+                <field name="comentarios_imago"/>
+                <field name="comentarios_contador"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Vista form de costos.gastos.line -->
+    <record id="view_costos_gastos_line_form" model="ir.ui.view">
+        <field name="name">costos.gastos.line.form</field>
+        <field name="model">costos.gastos.line</field>
+        <field name="arch" type="xml">
+            <form string="Costo o Gasto">
+                <sheet>
+                    <group>
+                        <field name="orden_compra_id"/>
+                        <field name="fecha_pago"/>
+                        <field name="tipo_pago"/>
+                        <field name="tipo_comprobante"/>
+                        <field name="folio_fiscal"/>
+                        <field name="no_comprobante"/>
+                        <field name="fecha_comprobante"/>
+                        <field name="concepto"/>
+                        <field name="proveedor_id"/>
+                        <field name="tax_id"/>
+                        <field name="country_id"/>
+                    </group>
+                    <group>
+                        <field name="importe"/>
+                        <field name="descuento"/>
+                        <field name="moneda_id"/>
+                        <field name="tipo_cambio"/>
+                        <field name="importe_mxn"/>
+                        <field name="iva"/>
+                        <field name="total"/>
+                        <field name="retencion_iva"/>
+                        <field name="otras_retenciones"/>
+                    </group>
+                    <group>
+                        <field name="pedimento_no"/>
+                        <field name="iva_pedimento"/>
+                        <field name="otros_impuestos_pedimento"/>
+                        <field name="division_subcuentas"/>
+                        <field name="importe_subcuenta"/>
+                        <field name="descuento_subcuenta"/>
+                        <field name="total_subcuenta_sin_iva"/>
+                    </group>
+                    <group>
+                        <field name="descripcion_cuenta"/>
+                        <field name="cuenta_id"/>
+                        <field name="comentarios_imago"/>
+                        <field name="comentarios_contador"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+     <!-- Vista de control.interno.mensual corregida -->
+    <record id="view_control_interno_mensual_form" model="ir.ui.view">
+        <field name="name">control.interno.mensual.form</field>
+        <field name="model">control.interno.mensual</field>
+        <field name="arch" type="xml">
+            <form string="Control Interno Mensual">
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="mes"/>
+                    </group>
+                    <notebook>
+                        <page string="Costos y Gastos">
+                            <field name="costos_gastos_ids" context="{'default_control_interno_id': id}" mode="tree,form">
+                                <views>
+                                    <view ref="view_costos_gastos_line_tree" type="tree"/>
+                                    <view ref="view_costos_gastos_line_form" type="form"/>
+                                </views>
+                            </field>
+                        </page>
+                        <page string="Ingresos">
+                            <!-- Definir vista de ingresos si es necesario -->
+                        </page>
+                    </notebook>
+                    <footer>
+                        <button name="cargar_datos_desde_xml" type="object" string="Cargar datos desde facturas del mes (XML)" class="btn-primary"/>
+                    </footer>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+
+    <record id="action_control_interno_mensual" model="ir.actions.act_window">
+        <field name="name">Control Interno Mensual</field>
+        <field name="res_model">control.interno.mensual</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+</odoo>

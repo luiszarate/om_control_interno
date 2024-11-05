@@ -1,0 +1,839 @@
+===== Archivo: security/ir.model.access.csv =====
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_control_interno_mensual,access_control_interno_mensual,model_control_interno_mensual,,1,1,1,1
+access_costos_gastos_line,access_costos_gastos_line,model_costos_gastos_line,,1,1,1,1
+access_factura_xml,access_factura_xml,model_factura_xml,,1,1,1,1
+access_catalogo_cuentas,access_catalogo_cuentas,model_catalogo_cuentas,,1,1,1,1
+access_factura_wizard_xml,access_factura_xml_wizard,model_factura_xml_wizard,,1,1,1,1
+access_factura_xml_purchase_order_wizard,access_factura_xml_purchase_order_wizard,model_factura_xml_purchase_order_wizard,,1,1,1,1
+
+
+
+===== Archivo: __init__.py =====
+#__init__.py
+
+from . import models
+
+
+===== Archivo: models/purchase_order_suggestion.py =====
+#models/purchase_order_suggestion.py
+
+from odoo import models, fields
+
+class PurchaseOrderSuggestion(models.TransientModel):
+    _name = 'purchase.order.suggestion'
+    _description = 'Sugerencia de Orden de Compra'
+
+    wizard_id = fields.Many2one('factura.xml.purchase.order.wizard', string='Asistente')
+    purchase_order_id = fields.Many2one('purchase.order', string='Orden de Compra')
+    score = fields.Integer(string='Puntaje')
+
+
+
+===== Archivo: models/control_interno_mensual.py =====
+#models/control.interno.mensual.py
+
+from odoo import models, fields, api
+from odoo.exceptions import UserError
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+
+
+class ControlInternoMensual(models.Model):
+    _name = 'control.interno.mensual'
+    _description = 'Control Interno Mensual'
+
+    name = fields.Char(string='Nombre', required=True)
+    mes = fields.Date(string='Mes', required=True)
+    costos_gastos_ids = fields.One2many('costos.gastos.line', 'control_interno_id', string='Costos y Gastos')
+    #ingresos_ids = fields.One2many('ingresos.line', 'control_interno_id', string='Ingresos')
+
+    def cargar_datos_desde_xml(self):
+        factura_xml_records = self.env['factura.xml'].search([
+            ('fecha', '>=', self.mes.replace(day=1)),
+            ('fecha', '<', (self.mes + relativedelta(months=1)).replace(day=1))
+        ])
+        if not factura_xml_records:
+            raise UserError('No hay facturas cargadas para este mes.')
+        for factura in factura_xml_records:
+            self.env['costos.gastos.line'].create({
+                'control_interno_id': self.id,
+                'fecha_comprobante': factura.fecha,
+                'proveedor_id': factura.proveedor_id.id,
+                'tax_id': factura.rfc,
+                'country_id': factura.pais_id.id,
+                'importe': factura.subtotal,
+                'descuento': factura.descuento,
+                'moneda_id': factura.moneda_id.id,
+                'tipo_cambio': factura.tipo_cambio,
+                'iva': factura.iva,
+                'total': factura.total,
+                'folio_fiscal': factura.uuid,
+                'no_comprobante': factura.folio,
+                'concepto': factura.concepto,
+            })
+
+
+===== Archivo: models/factura_xml_wizard.py =====
+#models/factura.xml.wizard.py
+
+from odoo import models, fields, api
+from odoo.exceptions import UserError
+import base64
+import zipfile
+import io
+import xml.etree.ElementTree as ET
+
+class FacturaXMLWizard(models.TransientModel):
+    _name = 'factura.xml.wizard'
+    _description = 'Asistente para cargar Facturas XML'
+
+    xml_file = fields.Binary(string='Archivo XML', attachment=False)
+    zip_file = fields.Binary(string='Archivo ZIP', attachment=False)
+    filename = fields.Char(string='Nombre de Archivo')
+
+    def cargar_facturas_xml(self):
+        if self.zip_file:
+            data = base64.b64decode(self.zip_file)
+            with zipfile.ZipFile(io.BytesIO(data), 'r') as zip_ref:
+                for file_info in zip_ref.infolist():
+                    if file_info.filename.endswith('.xml'):
+                        xml_content = zip_ref.read(file_info.filename)
+                        self._parse_xml(xml_content, file_info.filename)
+        elif self.xml_file:
+            xml_content = base64.b64decode(self.xml_file)
+            self._parse_xml(xml_content, self.filename)
+        else:
+            raise UserError('Debe cargar un archivo XML o ZIP.')
+
+    def _parse_xml(self, xml_content, filename):
+        root = ET.fromstring(xml_content)
+        version = root.attrib.get('Version', root.attrib.get('version', ''))
+        if version.startswith('3'):
+            ns = {'cfdi': 'http://www.sat.gob.mx/cfd/3'}
+        else:
+            ns = {'cfdi': 'http://www.sat.gob.mx/cfd/4'}
+
+        tipo_de_comprobante = root.attrib.get('TipoDeComprobante')
+        if tipo_de_comprobante == 'P':
+            return
+
+        complemento = root.find('cfdi:Complemento', ns)
+        uuid = ''
+        if complemento is not None:
+            tfd = complemento.find('tfd:TimbreFiscalDigital', {'tfd': 'http://www.sat.gob.mx/TimbreFiscalDigital'})
+            if tfd is not None:
+                uuid = tfd.get('UUID', '')
+
+        emisor = root.find('cfdi:Emisor', ns)
+        rfc = emisor.get('Rfc', '') if emisor is not None else ''
+        nombre = emisor.get('Nombre', '') if emisor is not None else ''
+
+        folio = root.attrib.get('Folio', '')
+        fecha = root.attrib.get('Fecha', '')
+        subtotal = float(root.attrib.get('SubTotal', '0'))
+        total = float(root.attrib.get('Total', '0'))
+        descuento = float(root.attrib.get('Descuento', '0'))
+        moneda = root.attrib.get('Moneda', 'MXN')
+        tipo_cambio = float(root.attrib.get('TipoCambio', '1'))
+
+        impuestos = root.find('cfdi:Impuestos', ns)
+        iva = 0.0
+        if impuestos is not None:
+            traslados = impuestos.find('cfdi:Traslados', ns)
+            if traslados is not None:
+                for traslado in traslados.findall('cfdi:Traslado', ns):
+                    if traslado.attrib.get('Impuesto') in ['002', 'IVA']:
+                        iva += float(traslado.attrib.get('Importe', '0'))
+
+        conceptos = root.find('cfdi:Conceptos', ns)
+        descripcion_concatenada = ''
+        if conceptos is not None:
+            descripcion_concatenada = ', '.join([
+                concepto.attrib.get('Descripcion', '') for concepto in conceptos.findall('cfdi:Concepto', ns)
+            ])
+
+        proveedor = self.env['res.partner'].search([('vat', '=', rfc)], limit=1)
+        """if not proveedor:
+            proveedor = self.env['res.partner'].create({'name': nombre, 'vat': rfc}) """
+
+        moneda_id = self.env['res.currency'].search([('name', '=', moneda)], limit=1)
+
+        self.env['factura.xml'].create({
+            'filename': filename,
+            'uuid': uuid,
+            'folio': folio,
+            'fecha': fecha,
+            'proveedor_id': proveedor.id,
+            'proveedor_text': nombre,
+            'rfc': rfc,
+            'pais_id': proveedor.country_id.id or self.env.ref('base.mx').id,
+            'subtotal': subtotal,
+            'descuento': descuento,
+            'moneda_id': moneda_id.id,
+            'tipo_cambio': tipo_cambio,
+            'iva': iva,
+            'total': total,
+            'concepto': descripcion_concatenada,
+        })
+
+
+===== Archivo: models/factura_xml_purchase_order_wizard.py =====
+#models/factura_xml_purchase_order_wizard.py
+
+from odoo import models, fields, api
+from odoo.exceptions import UserError
+
+class FacturaXMLPurchaseOrderWizard(models.TransientModel):
+    _name = 'factura.xml.purchase.order.wizard'
+    _description = 'Asistente para vincular Órdenes de Compra con Factura XML'
+
+    factura_xml_id = fields.Many2one('factura.xml', string='Factura XML', required=True)
+    purchase_order_id = fields.Many2one('purchase.order', string='Orden de Compra', required=True)
+    suggested_purchase_order_ids = fields.Many2many(
+        'purchase.order',
+        string='Órdenes de Compra Sugeridas',
+        readonly=True,
+    )
+    suggested_purchase_order_ids_ordered = fields.Char(string='IDs Ordenados', readonly=True)
+
+    @api.model
+    def default_get(self, fields):
+        res = super(FacturaXMLPurchaseOrderWizard, self).default_get(fields)
+        factura_xml = self.env['factura.xml'].browse(self._context.get('default_factura_xml_id'))
+        res['suggested_purchase_order_ids'] = [(6, 0, factura_xml.suggested_purchase_order_ids.ids)]
+        res['suggested_purchase_order_ids_ordered'] = ','.join(map(str, factura_xml.suggested_purchase_order_ids.ids))
+        return res
+
+    def action_link_purchase_order(self):
+        self.ensure_one()
+        if not self.purchase_order_id:
+            raise UserError('Debe seleccionar una Orden de Compra.')
+        self.factura_xml_id.ordenes_compra_ids = [(4, self.purchase_order_id.id)]
+        return {'type': 'ir.actions.act_window_close'}
+
+    def action_suggest_purchase_orders(self):
+        self.ensure_one()
+        # Abrir un asistente para mostrar las sugerencias
+        return {
+            'name': 'Sugerir Órdenes de Compra',
+            'type': 'ir.actions.act_window',
+            'res_model': 'factura.xml.purchase.order.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_factura_xml_id': self.id,
+            },
+        }
+
+===== Archivo: models/__init__.py =====
+#models/__init__.py
+from . import control_interno_mensual
+from . import costos_gastos_line
+from . import factura_xml
+from . import catalogo_cuentas
+from . import factura_xml_wizard
+from . import factura_xml_purchase_order_wizard
+#from . import purchase_order_suggestion  
+
+
+===== Archivo: models/catalogo_cuentas.py =====
+#models/catalogo_cuentas.py
+
+from odoo import models, fields
+
+class CatalogoCuentas(models.Model):
+    _name = 'catalogo.cuentas'
+    _description = 'Catálogo de Cuentas'
+
+    nombre_cuenta = fields.Char(string='Nombre de Cuenta', required=True)
+    numero_cuenta = fields.Char(string='Número de Cuenta', required=True)
+    descripcion = fields.Text(string='Descripción')
+
+
+===== Archivo: models/costos_gastos_line.py =====
+#models/costos_gastos_line.py
+
+from odoo import models, fields, api
+
+class CostosGastosLine(models.Model):
+    _name = 'costos.gastos.line'
+    _description = 'Línea de Costos y Gastos'
+
+    control_interno_id = fields.Many2one('control.interno.mensual', string='Control Interno')
+    orden_compra_id = fields.Many2one('purchase.order', string='Orden de Compra')
+    fecha_pago = fields.Date(string='Fecha de Pago')
+    tipo_pago = fields.Selection([
+        ('caja_chica', 'Caja Chica'),
+        ('debito', 'Débito'),
+        ('credito', 'Crédito'),
+        ('transferencia', 'Transferencia'),
+        ('otro', 'Otro'),
+        ('efectivo', 'Efectivo'),
+        ('cheque', 'Cheque'),
+    ], string='Tipo de Pago')
+    tipo_comprobante = fields.Selection([
+        ('factura_nacional', 'Factura Nacional'),
+        ('factura_extranjera', 'Factura Extranjera'),
+        ('nota_remision', 'Nota de Remisión'),
+        ('pedimento', 'Pedimento'),
+        ('linea_captura', 'Línea de Captura'),
+        ('estado_cuenta', 'Estado de Cuenta'),
+        ('recibo_caja', 'Recibo de Caja'),
+        ('sin_recibo', 'Sin Recibo'),
+    ], string='Tipo de Comprobante')
+    folio_fiscal = fields.Char(string='Folio Fiscal')
+    no_comprobante = fields.Char(string='No. Comprobante')
+    fecha_comprobante = fields.Date(string='Fecha de Comprobante')
+    concepto = fields.Char(string='Concepto')
+    proveedor_id = fields.Many2one('res.partner', string='Proveedor')
+    tax_id = fields.Char(string='TAX ID')
+    country_id = fields.Many2one('res.country', string='País')
+    importe = fields.Float(string='Importe')
+    descuento = fields.Float(string='Descuento')
+    moneda_id = fields.Many2one('res.currency', string='Moneda')
+    tipo_cambio = fields.Float(string='Tipo de Cambio')
+    importe_mxn = fields.Float(string='Importe MXN', compute='_compute_importe_mxn')
+    iva = fields.Float(string='IVA')
+    total = fields.Float(string='Total')
+    retencion_iva = fields.Float(string='Retención IVA')
+    otras_retenciones = fields.Float(string='Otras Retenciones')
+    pedimento_no = fields.Char(string='Pedimento No.')
+    iva_pedimento = fields.Float(string='IVA Pedimento')
+    otros_impuestos_pedimento = fields.Float(string='Otros Impuestos Pedimento')
+    division_subcuentas = fields.Char(string='División en Subcuentas')
+    importe_subcuenta = fields.Float(string='Importe Subcuenta')
+    descuento_subcuenta = fields.Float(string='Descuento Subcuenta')
+    total_subcuenta_sin_iva = fields.Float(string='Total Subcuenta s/IVA')
+    descripcion_cuenta = fields.Text(string='Descripción de Cuenta', related='cuenta_id.descripcion', store=True)
+    cuenta_id = fields.Many2one('catalogo.cuentas', string='Cuenta')
+    comentarios_imago = fields.Text(string='Comentarios Imago Aerospace')
+    comentarios_contador = fields.Text(string='Comentarios Contador')
+
+    @api.depends('importe', 'tipo_cambio')
+    def _compute_importe_mxn(self):
+        for record in self:
+            tipo_cambio = record.tipo_cambio or 1.0
+            moneda = record.moneda_id.name if record.moneda_id else 'MXN'
+            if moneda != 'MXN':
+                record.importe_mxn = record.importe * tipo_cambio
+            else:
+                record.importe_mxn = record.importe
+
+
+===== Archivo: models/factura_xml.py =====
+#models/factura_xml.py
+
+from odoo import models, fields, api
+from odoo.exceptions import UserError
+import difflib 
+from datetime import timedelta, datetime
+
+import base64
+import zipfile
+import io
+import xml.etree.ElementTree as ET
+
+class FacturaXML(models.Model):
+    _name = 'factura.xml'
+    _description = 'Factura XML'
+
+    filename = fields.Char(string='Nombre de Archivo')
+    uuid = fields.Char(string='UUID')
+    folio = fields.Char(string='Folio')
+    fecha = fields.Date(string='Fecha')
+    proveedor_text = fields.Char(string='Proveedor Odoo')
+    proveedor_id = fields.Many2one('res.partner', string='Proveedor')
+    rfc = fields.Char(string='RFC')
+    pais_id = fields.Many2one('res.country', string='País')
+    subtotal = fields.Float(string='Subtotal')
+    descuento = fields.Float(string='Descuento')
+    moneda_id = fields.Many2one('res.currency', string='Moneda')
+    tipo_cambio = fields.Float(string='Tipo de Cambio')
+    iva = fields.Float(string='IVA')
+    total = fields.Float(string='Total')
+    concepto = fields.Char(string='Concepto')
+    ordenes_compra_ids = fields.Many2many('purchase.order', string='Órdenes de Compra')
+    
+    state = fields.Selection([
+        ('draft', 'Borrador'),
+        ('validated', 'Validado'),
+        ('cancelled', 'Cancelado'),
+    ], string='Estado', default='draft', tracking=True)
+
+    suggested_purchase_order_ids = fields.Many2many(
+        'purchase.order',
+        string='Órdenes de Compra Sugeridas',
+        compute='_compute_suggested_purchase_orders',
+        store=False,
+    )
+
+    def action_suggest_purchase_orders(self):
+        self.ensure_one()
+        # Abrir un asistente para mostrar las sugerencias
+        return {
+            'name': 'Sugerir Órdenes de Compra',
+            'type': 'ir.actions.act_window',
+            'res_model': 'factura.xml.purchase.order.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_factura_xml_id': self.id,
+            },
+        }
+    
+
+    def _get_suggestions_with_scores(self):
+        suggestions = []
+        if not self.fecha:
+            return suggestions
+
+        # Obtener la fecha de la factura
+        invoice_date = self.fecha
+
+        # Calcular el primer día del mes anterior
+        start_date = (invoice_date.replace(day=1) - timedelta(days=1)).replace(day=1)
+
+        # Calcular el último día del mes posterior
+        next_month = invoice_date.replace(day=28) + timedelta(days=4)
+        end_date = (next_month + timedelta(days=31)).replace(day=1) - timedelta(days=1)
+
+        # Buscar órdenes de compra dentro del rango de fechas
+        domain = [
+            ('date_order', '>=', start_date),
+            ('date_order', '<=', end_date),
+        ]
+        purchase_orders = self.env['purchase.order'].search(domain)
+
+        for po in purchase_orders:
+            score = 0
+            # Coincidencia por RFC
+            if self.rfc and po.partner_id.vat:
+                if self.rfc.strip() == po.partner_id.vat.strip():
+                    score += 3
+            # Coincidencia por nombre de proveedor
+            else:
+                ratio = difflib.SequenceMatcher(
+                    None,
+                    (self.proveedor_id.name or '').lower(),
+                    (po.partner_id.name or '').lower()
+                ).ratio()
+                if ratio > 0.6:
+                    score += 2
+            # Coincidencia por monto
+            invoice_total = self.total or 0.0
+            po_total = po.amount_total or 0.0
+            if invoice_total > 0 and abs(invoice_total - po_total) / invoice_total < 0.1:
+                score += 2
+            # Coincidencia por fecha (dentro de 7 días)
+            if self.fecha and po.date_order:
+                date_diff = abs((self.fecha - po.date_order.date()).days)
+                if date_diff <= 7:
+                    score += 1
+                # Coincidencia en el mismo mes y año
+                if self.fecha.month == po.date_order.month and self.fecha.year == po.date_order.year:
+                    score += 2
+            if score > 0:
+                suggestions.append({'po': po, 'score': score})
+        # Ordenar las sugerencias por puntaje
+        suggestions = sorted(suggestions, key=lambda x: x['score'], reverse=True)
+        return suggestions
+ 
+    def _compute_suggested_purchase_orders(self):
+        for record in self:
+            suggestions = []
+            if not record.fecha:
+                continue
+
+            # Obtener la fecha de la factura
+            invoice_date = record.fecha
+
+            # Calcular el primer día del mes anterior
+            start_date = (invoice_date.replace(day=1) - timedelta(days=1)).replace(day=1)
+
+            # Calcular el último día del mes posterior
+            next_month = invoice_date.replace(day=28) + timedelta(days=4)
+            end_date = (next_month + timedelta(days=31)).replace(day=1) - timedelta(days=1)
+
+            # Buscar órdenes de compra dentro del rango de fechas
+            domain = [
+                ('date_order', '>=', start_date),
+                ('date_order', '<=', end_date),
+            ]
+            purchase_orders = self.env['purchase.order'].search(domain)
+
+            for po in purchase_orders:
+                score = 0
+                # Coincidencia por RFC
+                if record.rfc and po.partner_id.vat:
+                    if record.rfc.strip() == po.partner_id.vat.strip():
+                        score += 3
+                # Coincidencia por nombre de proveedor
+                else:
+                    ratio = difflib.SequenceMatcher(
+                        None,
+                        (record.proveedor_id.name or '').lower(),
+                        (po.partner_id.name or '').lower()
+                    ).ratio()
+                    if ratio > 0.6:
+                        score += 2
+                # Coincidencia por monto
+                invoice_total = record.total or 0.0
+                po_total = po.amount_total or 0.0
+                if invoice_total > 0 and abs(invoice_total - po_total) / invoice_total < 0.1:
+                    score += 2
+                # Coincidencia por fecha (dentro de 7 días)
+                if record.fecha and po.date_order:
+                    date_diff = abs((record.fecha - po.date_order.date()).days)
+                    if date_diff <= 7:
+                        score += 1
+                    # Nueva regla: Coincidencia dentro del mismo mes y año
+                    if record.fecha.month == po.date_order.month and record.fecha.year == po.date_order.year:
+                        score += 2  # Más puntos por estar en el mismo mes y año
+                if score > 0:
+                    suggestions.append({'po': po, 'score': score})
+
+            # Ordenar las sugerencias por puntaje, de mayor a menor
+            suggestions = sorted(suggestions, key=lambda x: x['score'], reverse=True)
+            # Asignar las órdenes de compra sugeridas
+            record.suggested_purchase_order_ids = [s['po'].id for s in suggestions]
+    #xml_file = fields.Binary(string='Archivo XML')
+    #zip_file = fields.Binary(string='Archivo ZIP')
+
+    
+
+===== Archivo: __manifest__.py =====
+#__manifest__.py
+
+{
+    'name': 'Control Interno',
+    'version': '1.0',
+    'summary': 'Módulo para llevar un control interno de facturas',
+    'author': 'Tu Nombre',
+    'depends': ['account', 'purchase'],
+    'data': [
+        'security/ir.model.access.csv',
+        'views/control_interno_views.xml',
+        'views/factura_xml_views.xml',
+        'views/catalogo_cuentas_views.xml',
+        'views/factura_xml_purchase_order_wizard_views.xml',
+        'views/control_interno_menus.xml',
+    ],
+    'installable': True,
+    'application': True,
+}
+
+
+===== Archivo: data/catalogo_cuentas_data.xml =====
+
+
+===== Archivo: views/factura_xml_purchase_order_wizard_views.xml =====
+<!-- views/factura_xml_purchase_order_wizard_views.xml -->
+
+<odoo>
+    <record id="view_factura_xml_purchase_order_wizard_form" model="ir.ui.view">
+        <field name="name">factura.xml.purchase.order.wizard.form</field>
+        <field name="model">factura.xml.purchase.order.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Sugerir Órdenes de Compra">
+                <group>
+                    <field name="factura_xml_id" invisible="1"/>
+                    <field name="suggested_purchase_order_ids" widget="many2many_tags" options="{'no_create': True}" readonly="1" nolabel="1"/>
+                    <field name="purchase_order_id" domain="[('id', 'in', suggested_purchase_order_ids)]"/>
+                </group>
+                <footer>
+                    <button string="Vincular" name="action_link_purchase_order" type="object" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>         
+    </record>
+</odoo>
+
+
+
+===== Archivo: views/control_interno_views.xml =====
+<!--views/control_interno_views.xml
+-->
+
+<odoo>
+    <record id="view_costos_gastos_line_tree" model="ir.ui.view">
+        <field name="name">costos.gastos.line.tree</field>
+        <field name="model">costos.gastos.line</field>
+        <field name="arch" type="xml">
+            <tree string="Costos y Gastos" editable="bottom">
+                <field name="orden_compra_id"/>
+                <field name="fecha_pago"/>
+                <field name="tipo_pago"/>
+                <field name="tipo_comprobante"/>
+                <field name="folio_fiscal"/>
+                <field name="no_comprobante"/>
+                <field name="fecha_comprobante"/>
+                <field name="concepto"/>
+                <field name="proveedor_id"/>
+                <field name="tax_id"/>
+                <field name="country_id"/>
+                <field name="importe"/>
+                <field name="descuento"/>
+                <field name="moneda_id"/>
+                <field name="tipo_cambio"/>
+                <field name="importe_mxn"/>
+                <field name="iva"/>
+                <field name="total"/>
+                <field name="retencion_iva"/>
+                <field name="otras_retenciones"/>
+                <field name="pedimento_no"/>
+                <field name="iva_pedimento"/>
+                <field name="otros_impuestos_pedimento"/>
+                <field name="division_subcuentas"/>
+                <field name="importe_subcuenta"/>
+                <field name="descuento_subcuenta"/>
+                <field name="total_subcuenta_sin_iva"/>
+                <field name="descripcion_cuenta"/>
+                <field name="cuenta_id"/>
+                <field name="comentarios_imago"/>
+                <field name="comentarios_contador"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Vista form de costos.gastos.line -->
+    <record id="view_costos_gastos_line_form" model="ir.ui.view">
+        <field name="name">costos.gastos.line.form</field>
+        <field name="model">costos.gastos.line</field>
+        <field name="arch" type="xml">
+            <form string="Costo o Gasto">
+                <sheet>
+                    <group>
+                        <field name="orden_compra_id"/>
+                        <field name="fecha_pago"/>
+                        <field name="tipo_pago"/>
+                        <field name="tipo_comprobante"/>
+                        <field name="folio_fiscal"/>
+                        <field name="no_comprobante"/>
+                        <field name="fecha_comprobante"/>
+                        <field name="concepto"/>
+                        <field name="proveedor_id"/>
+                        <field name="tax_id"/>
+                        <field name="country_id"/>
+                    </group>
+                    <group>
+                        <field name="importe"/>
+                        <field name="descuento"/>
+                        <field name="moneda_id"/>
+                        <field name="tipo_cambio"/>
+                        <field name="importe_mxn"/>
+                        <field name="iva"/>
+                        <field name="total"/>
+                        <field name="retencion_iva"/>
+                        <field name="otras_retenciones"/>
+                    </group>
+                    <group>
+                        <field name="pedimento_no"/>
+                        <field name="iva_pedimento"/>
+                        <field name="otros_impuestos_pedimento"/>
+                        <field name="division_subcuentas"/>
+                        <field name="importe_subcuenta"/>
+                        <field name="descuento_subcuenta"/>
+                        <field name="total_subcuenta_sin_iva"/>
+                    </group>
+                    <group>
+                        <field name="descripcion_cuenta"/>
+                        <field name="cuenta_id"/>
+                        <field name="comentarios_imago"/>
+                        <field name="comentarios_contador"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+     <!-- Vista de control.interno.mensual corregida -->
+    <record id="view_control_interno_mensual_form" model="ir.ui.view">
+        <field name="name">control.interno.mensual.form</field>
+        <field name="model">control.interno.mensual</field>
+        <field name="arch" type="xml">
+            <form string="Control Interno Mensual">
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="mes"/>
+                    </group>
+                    <notebook>
+                        <page string="Costos y Gastos">
+                            <field name="costos_gastos_ids" context="{'default_control_interno_id': id}" mode="tree,form">
+                                <views>
+                                    <view ref="view_costos_gastos_line_tree" type="tree"/>
+                                    <view ref="view_costos_gastos_line_form" type="form"/>
+                                </views>
+                            </field>
+                        </page>
+                        <page string="Ingresos">
+                            <!-- Definir vista de ingresos si es necesario -->
+                        </page>
+                    </notebook>
+                    <footer>
+                        <button name="cargar_datos_desde_xml" type="object" string="Cargar datos desde facturas del mes (XML)" class="btn-primary"/>
+                    </footer>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+
+    <record id="action_control_interno_mensual" model="ir.actions.act_window">
+        <field name="name">Control Interno Mensual</field>
+        <field name="res_model">control.interno.mensual</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+</odoo>
+
+
+===== Archivo: views/catalogo_cuentas_views.xml =====
+<!--views/catalogo_cuentas_views.xml-->
+
+<odoo>
+    <record id="view_catalogo_cuentas_tree" model="ir.ui.view">
+        <field name="name">catalogo.cuentas.tree</field>
+        <field name="model">catalogo.cuentas</field>
+        <field name="arch" type="xml">
+            <tree string="Catálogo de Cuentas">
+                <field name="numero_cuenta"/>
+                <field name="nombre_cuenta"/>
+                <field name="descripcion"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_catalogo_cuentas_form" model="ir.ui.view">
+        <field name="name">catalogo.cuentas.form</field>
+        <field name="model">catalogo.cuentas</field>
+        <field name="arch" type="xml">
+            <form string="Catálogo de Cuentas">
+                <sheet>
+                    <group>
+                        <field name="nombre_cuenta"/>
+                        <field name="numero_cuenta"/>
+                        <field name="descripcion"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_catalogo_cuentas" model="ir.actions.act_window">
+        <field name="name">Catálogo de Cuentas</field>
+        <field name="res_model">catalogo.cuentas</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+</odoo>
+
+
+===== Archivo: views/factura_xml_views.xml =====
+<!--views/factura_xml_views.xml
+-->
+
+<odoo>
+    <!-- Vista del asistente para cargar facturas XML -->
+    <record id="view_factura_xml_wizard_form" model="ir.ui.view">
+        <field name="name">factura.xml.wizard.form</field>
+        <field name="model">factura.xml.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Cargar Facturas XML">
+                <group>
+                    <field name="xml_file" filename="filename"/>
+                    <field name="zip_file" filename="filename"/>
+                </group>
+                <footer>
+                    <button name="cargar_facturas_xml" type="object" string="Cargar" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_factura_xml_tree" model="ir.ui.view">
+        <field name="name">factura.xml.tree</field>
+        <field name="model">factura.xml</field>
+        <field name="arch" type="xml">
+            <tree string="Facturas XML">
+                <field name="filename"/>
+                <field name="uuid"/>
+                <field name="folio"/>
+                <field name="fecha"/>
+                <field name="proveedor_id"/>
+                <field name="proveedor_text"/>
+                <field name="rfc"/>
+                <field name="pais_id"/>
+                <field name="subtotal"/>
+                <field name="descuento"/>
+                <field name="moneda_id"/>
+                <field name="tipo_cambio"/>
+                <field name="iva"/>
+                <field name="total"/>
+                <field name="concepto"/>
+                <field name="ordenes_compra_ids"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_factura_xml_form" model="ir.ui.view">
+        <field name="name">factura.xml.form</field>
+        <field name="model">factura.xml</field>
+        <field name="arch" type="xml">
+            <form string="Factura XML">
+                <sheet>
+                    <header>
+                        <field name="state" widget="statusbar" statusbar_visible="draft,validated,cancelled"/>
+                        <button name="action_suggest_purchase_orders" type="object" string="Sugerir Órdenes de Compra" class="btn-primary"/>
+                    </header>
+                    <group>
+                        <field name="filename"/>
+                        <field name="uuid"/>
+                        <field name="folio"/>
+                        <field name="fecha"/>
+                        <field name="proveedor_id"/>
+                        <field name="rfc"/>
+                        <field name="pais_id"/>
+                        <field name="subtotal"/>
+                        <field name="descuento"/>
+                        <field name="moneda_id"/>
+                        <field name="tipo_cambio"/>
+                        <field name="iva"/>
+                        <field name="total"/>
+                        <field name="concepto"/>
+                        <field name="ordenes_compra_ids"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+     <!-- Acción para abrir el asistente -->
+    <record id="action_factura_xml_wizard" model="ir.actions.act_window">
+        <field name="name">Cargar Facturas XML</field>
+        <field name="res_model">factura.xml.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <record id="action_factura_xml" model="ir.actions.act_window">
+        <field name="name">Facturas XML</field>
+        <field name="res_model">factura.xml</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+</odoo>
+
+
+===== Archivo: views/control_interno_menus.xml =====
+<!--views/control_interno_menus.xml
+-->
+<odoo>
+    <menuitem id="menu_control_interno" name="Control Interno" parent="account.menu_finance" sequence="100"/>
+    <menuitem id="menu_control_interno_mensual" name="Control Interno Mensual" parent="menu_control_interno" action="action_control_interno_mensual"/>
+    <menuitem id="menu_ver_facturas_xml" name="Ver Facturas XML" parent="menu_control_interno" action="action_factura_xml"/>
+    <menuitem id="menu_cargar_facturas_xml" name="Cargar Facturas XML" parent="menu_control_interno" action="action_factura_xml_wizard"/>
+    <menuitem id="menu_catalogo_cuentas" name="Catálogo de Cuentas" parent="menu_control_interno" action="action_catalogo_cuentas"/>
+</odoo>
+
+

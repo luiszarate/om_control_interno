@@ -1,0 +1,9 @@
+<!--views/control_interno_menus.xml
+-->
+<odoo>
+    <menuitem id="menu_control_interno" name="Control Interno" parent="account.menu_finance" sequence="100"/>
+    <menuitem id="menu_control_interno_mensual" name="Control Interno Mensual" parent="menu_control_interno" action="action_control_interno_mensual"/>
+    <menuitem id="menu_ver_facturas_xml" name="Ver Facturas XML" parent="menu_control_interno" action="action_factura_xml"/>
+    <menuitem id="menu_cargar_facturas_xml" name="Cargar Facturas XML" parent="menu_control_interno" action="action_factura_xml_wizard"/>
+    <menuitem id="menu_catalogo_cuentas" name="Catálogo de Cuentas" parent="menu_control_interno" action="action_catalogo_cuentas"/>
+</odoo>
