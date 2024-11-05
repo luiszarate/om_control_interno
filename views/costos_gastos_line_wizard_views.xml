@@ -1,0 +1,19 @@
+<!-- views/costos_gastos_line_wizard_views.xml -->
+
+<odoo>
+    <record id="view_costos_gastos_line_wizard_form" model="ir.ui.view">
+        <field name="name">costos.gastos.line.wizard.form</field>
+        <field name="model">costos.gastos.line.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Confirmar Carga de Datos">
+                <group>
+                    <p>¿Desea cargar los datos de la Orden de Compra seleccionada en esta línea?</p>
+                </group>
+                <footer>
+                    <button string="Sí" type="object" name="action_confirm" class="btn-primary"/>
+                    <button string="No" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

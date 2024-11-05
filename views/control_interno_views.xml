@@ -48,6 +48,7 @@
         <field name="model">costos.gastos.line</field>
         <field name="arch" type="xml">
             <form string="Costo o Gasto">
+                
                 <sheet>
                     <group>
                         <field name="orden_compra_id"/>

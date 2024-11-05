@@ -25,6 +25,7 @@ class ControlInternoMensual(models.Model):
         for factura in factura_xml_records:
             self.env['costos.gastos.line'].create({
                 'control_interno_id': self.id,
+                'factura_xml_id': factura.id,
                 'fecha_comprobante': factura.fecha,
                 'proveedor_id': factura.proveedor_id.id,
                 'tax_id': factura.rfc,

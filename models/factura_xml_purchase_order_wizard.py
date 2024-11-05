@@ -21,5 +21,23 @@ class FacturaXMLPurchaseOrderWizard(models.TransientModel):
         self.ensure_one()
         if not self.purchase_order_id:
             raise UserError('Debe seleccionar una Orden de Compra.')
+        # Vincular la Orden de Compra a la factura.xml
         self.factura_xml_id.ordenes_compra_ids = [(4, self.purchase_order_id.id)]
+
+        # Sincronizar las líneas de Control Interno
+        self._sync_control_interno_lines()
+
         return {'type': 'ir.actions.act_window_close'}
+
+    def _sync_control_interno_lines(self):
+        factura = self.factura_xml_id
+        purchase_order = self.purchase_order_id
+        
+        # Buscar líneas de control interno relacionadas con esta factura
+        control_interno_lines = self.env['costos.gastos.line'].search([
+            ('factura_xml_id', '=', factura.id)  # Asumiendo que existe este campo
+        ])
+
+        for line in control_interno_lines:
+            line.orden_compra_id = purchase_order.id
+            line._load_data_from_purchase_order()

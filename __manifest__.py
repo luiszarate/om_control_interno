@@ -12,6 +12,7 @@
         'views/factura_xml_views.xml',
         'views/catalogo_cuentas_views.xml',
         'views/factura_xml_purchase_order_wizard_views.xml',
+        'views/costos_gastos_line_wizard_views.xml',  # Nueva vista
         'views/control_interno_menus.xml',
     ],
     'installable': True,

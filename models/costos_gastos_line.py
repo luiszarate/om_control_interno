@@ -1,12 +1,15 @@
 #models/costos_gastos_line.py
 
 from odoo import models, fields, api
+from odoo.exceptions import UserError
+
 
 class CostosGastosLine(models.Model):
     _name = 'costos.gastos.line'
     _description = 'Línea de Costos y Gastos'
 
     control_interno_id = fields.Many2one('control.interno.mensual', string='Control Interno')
+    factura_xml_id = fields.Many2one('factura.xml', string='Factura XML')  # Nueva relación
     orden_compra_id = fields.Many2one('purchase.order', string='Orden de Compra')
     fecha_pago = fields.Date(string='Fecha de Pago')
     tipo_pago = fields.Selection([
@@ -56,6 +59,20 @@ class CostosGastosLine(models.Model):
     comentarios_imago = fields.Text(string='Comentarios Imago Aerospace')
     comentarios_contador = fields.Text(string='Comentarios Contador')
 
+    orden_compra_changed = fields.Boolean(string='Orden de Compra Cambiada', default=False, compute='_compute_orden_compra_changed', store=False)
+
+    @api.depends('orden_compra_id')
+    def _compute_orden_compra_changed(self):
+        for record in self:
+            if record.id:
+                original = self.env['costos.gastos.line'].browse(record.id)
+                if original.exists() and original.orden_compra_id != record.orden_compra_id:
+                    record.orden_compra_changed = True
+                else:
+                    record.orden_compra_changed = False
+            else:
+                record.orden_compra_changed = False
+
     @api.depends('importe', 'tipo_cambio')
     def _compute_importe_mxn(self):
         for record in self:
@@ -65,3 +82,38 @@ class CostosGastosLine(models.Model):
                 record.importe_mxn = record.importe * tipo_cambio
             else:
                 record.importe_mxn = record.importe
+
+    @api.onchange('orden_compra_id')
+    def _onchange_orden_compra_id(self):
+        if self.orden_compra_id and not self.id:
+            # Es un nuevo registro, cargar datos automáticamente
+            self._load_data_from_purchase_order()
+        # No realizar nada para registros existente
+                
+
+    def _load_data_from_purchase_order(self):
+        po = self.orden_compra_id
+        self.fecha_pago = po.date_order
+        self.proveedor_id = po.partner_id
+        self.tax_id = po.partner_id.vat
+        self.moneda_id = po.currency_id
+        self.importe = po.amount_untaxed
+        self.iva = po.amount_tax
+        self.total = po.amount_total
+        # Asigna 'tipo_pago' según tu lógica o déjalo para que el usuario lo complete
+        # self.tipo_pago = ...
+
+    def action_load_data_from_purchase_order(self):
+        if not self.orden_compra_id:
+            raise UserError('Debe seleccionar una Orden de Compra.')
+        # Abrir el wizard
+        return {
+            'name': 'Confirmar Carga de Datos',
+            'type': 'ir.actions.act_window',
+            'res_model': 'costos.gastos.line.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_line_id': self.id,
+            },
+        }

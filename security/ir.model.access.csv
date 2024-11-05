@@ -5,4 +5,5 @@ access_factura_xml,access_factura_xml,model_factura_xml,,1,1,1,1
 access_catalogo_cuentas,access_catalogo_cuentas,model_catalogo_cuentas,,1,1,1,1
 access_factura_wizard_xml,access_factura_xml_wizard,model_factura_xml_wizard,,1,1,1,1
 access_factura_xml_purchase_order_wizard,access_factura_xml_purchase_order_wizard,model_factura_xml_purchase_order_wizard,,1,1,1,1
+access_costos_gastos_line_wizard,access_costos_gastos_line_wizard,model_costos_gastos_line_wizard,,1,1,1,1
 
