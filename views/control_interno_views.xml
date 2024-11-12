@@ -6,7 +6,8 @@
         <field name="name">costos.gastos.line.tree</field>
         <field name="model">costos.gastos.line</field>
         <field name="arch" type="xml">
-            <tree string="Costos y Gastos" editable="bottom">
+            <tree string="Costos y Gastos" editable="bottom" default_order="fecha_comprobante asc">
+                <field name="factura_xml_id" string="Factura XML"/>
                 <field name="orden_compra_id"/>
                 <field name="fecha_pago"/>
                 <field name="tipo_pago"/>
@@ -15,7 +16,7 @@
                 <field name="no_comprobante"/>
                 <field name="fecha_comprobante"/>
                 <field name="concepto"/>
-                <field name="proveedor_id"/>
+                <field name="proveedor_text"/>
                 <field name="tax_id"/>
                 <field name="country_id"/>
                 <field name="importe"/>
@@ -51,6 +52,7 @@
                 
                 <sheet>
                     <group>
+                        <field name="factura_xml_id" string="Factura XML"/>
                         <field name="orden_compra_id"/>
                         <field name="fecha_pago"/>
                         <field name="tipo_pago"/>
@@ -59,7 +61,8 @@
                         <field name="no_comprobante"/>
                         <field name="fecha_comprobante"/>
                         <field name="concepto"/>
-                        <field name="proveedor_id"/>
+                        <field name="proveedor_text"/>
+                        <field name="proveedor_id" hidden="true"/>
                         <field name="tax_id"/>
                         <field name="country_id"/>
                     </group>
@@ -120,6 +123,7 @@
                     </notebook>
                     <footer>
                         <button name="cargar_datos_desde_xml" type="object" string="Cargar datos desde facturas del mes (XML)" class="btn-primary"/>
+                        <button name="action_export_csv" type="object" string="Exportar a CSV" class="btn-secondary"/>
                     </footer>
                 </sheet>
             </form>

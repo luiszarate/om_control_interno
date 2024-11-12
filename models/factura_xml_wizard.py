@@ -77,8 +77,7 @@ class FacturaXMLWizard(models.TransientModel):
             ])
 
         proveedor = self.env['res.partner'].search([('vat', '=', rfc)], limit=1)
-        """if not proveedor:
-            proveedor = self.env['res.partner'].create({'name': nombre, 'vat': rfc}) """
+        
 
         moneda_id = self.env['res.currency'].search([('name', '=', moneda)], limit=1)
 

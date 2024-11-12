@@ -5,5 +5,8 @@
     <menuitem id="menu_control_interno_mensual" name="Control Interno Mensual" parent="menu_control_interno" action="action_control_interno_mensual"/>
     <menuitem id="menu_ver_facturas_xml" name="Ver Facturas XML" parent="menu_control_interno" action="action_factura_xml"/>
     <menuitem id="menu_cargar_facturas_xml" name="Cargar Facturas XML" parent="menu_control_interno" action="action_factura_xml_wizard"/>
-    <menuitem id="menu_catalogo_cuentas" name="Catálogo de Cuentas" parent="menu_control_interno" action="action_catalogo_cuentas"/>
+    <menuitem id="menu_catalogo_cuentas" name="Catálogo de Cuentas" parent="menu_control_interno"/>
+    <menuitem id="menu_ver_catalogo_cuentas" name="Ver Catálogo de Cuentas" parent="menu_catalogo_cuentas" action="action_catalogo_cuentas"/>
+    <menuitem id="menu_import_catalogo_cuentas" name="Importar Catálogo de Cuentas" parent="menu_catalogo_cuentas" action="action_catalogo_cuentas_import_wizard"/>
+    <!-- Move the child menu item here -->
 </odoo>

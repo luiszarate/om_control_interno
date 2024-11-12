@@ -20,8 +20,8 @@ class FacturaXML(models.Model):
     uuid = fields.Char(string='UUID')
     folio = fields.Char(string='Folio')
     fecha = fields.Date(string='Fecha')
-    proveedor_text = fields.Char(string='Proveedor Odoo')
-    proveedor_id = fields.Many2one('res.partner', string='Proveedor')
+    proveedor_text = fields.Char(string='Proveedor')
+    proveedor_id = fields.Many2one('res.partner', string='Proveedor Odoo')
     rfc = fields.Char(string='RFC')
     pais_id = fields.Many2one('res.country', string='País')
     subtotal = fields.Float(string='Subtotal')
@@ -171,4 +171,34 @@ class FacturaXML(models.Model):
                     suggestions |= po
             record.suggested_purchase_order_ids = suggestions
 
+    def write(self, vals):
+        res = super(FacturaXML, self).write(vals)
+        if 'ordenes_compra_ids' in vals:
+            for factura in self:
+                # Get the first related purchase order, if any
+                purchase_order = factura.ordenes_compra_ids[:1]
+                # Find related costos.gastos.line records
+                control_interno_lines = self.env['costos.gastos.line'].search([
+                    ('factura_xml_id', '=', factura.id)
+                ])
+                for line in control_interno_lines:
+                    line.orden_compra_id = purchase_order.id if purchase_order else False
+        return res
     
+    
+    def name_get(self):
+        result = []
+        for record in self:
+            name = f"{record.uuid or ''} - {record.proveedor_text or ''} - {record.folio or ''}"
+            result.append((record.id, name))
+        return result
+
+    @api.model
+    def name_search(self, name, args=None, operator='ilike', limit=100):
+        args = args or []
+        domain = args + ['|', '|',
+                         ('uuid', operator, name),
+                         ('proveedor_text', operator, name),
+                         ('folio', operator, name)]
+        records = self.search(domain, limit=limit)
+        return records.name_get()

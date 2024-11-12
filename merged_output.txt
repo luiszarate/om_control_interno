@@ -6,13 +6,33 @@ access_factura_xml,access_factura_xml,model_factura_xml,,1,1,1,1
 access_catalogo_cuentas,access_catalogo_cuentas,model_catalogo_cuentas,,1,1,1,1
 access_factura_wizard_xml,access_factura_xml_wizard,model_factura_xml_wizard,,1,1,1,1
 access_factura_xml_purchase_order_wizard,access_factura_xml_purchase_order_wizard,model_factura_xml_purchase_order_wizard,,1,1,1,1
-
+access_costos_gastos_line_wizard,access_costos_gastos_line_wizard,model_costos_gastos_line_wizard,,1,1,1,1
+access_catalogo_cuentas_import_wizard,access_catalogo_cuentas_import_wizard,model_catalogo_cuentas_import_wizard,,1,1,1,1
 
 
 ===== Archivo: __init__.py =====
 #__init__.py
 
 from . import models
+
+
+===== Archivo: models/costos_gastos_line_wizard.py =====
+# models/costos_gastos_line_wizard.py
+
+from odoo import models, fields, api
+from odoo.exceptions import UserError
+
+class CostosGastosLineWizard(models.TransientModel):
+    _name = 'costos.gastos.line.wizard'
+    _description = 'Asistente para Confirmar Carga de Datos de Orden de Compra'
+
+    line_id = fields.Many2one('costos.gastos.line', string='Línea de Costos y Gastos')
+    confirm = fields.Boolean(string='Confirmar', default=False)
+
+    def action_confirm(self):
+        if self.line_id and self.confirm:
+            self.line_id._load_data_from_purchase_order()
+        return {'type': 'ir.actions.act_window_close'}
 
 
 ===== Archivo: models/purchase_order_suggestion.py =====
@@ -37,6 +57,9 @@ from odoo import models, fields, api
 from odoo.exceptions import UserError
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+import csv
+import base64
+from io import StringIO
 
 
 class ControlInternoMensual(models.Model):
@@ -56,10 +79,20 @@ class ControlInternoMensual(models.Model):
         if not factura_xml_records:
             raise UserError('No hay facturas cargadas para este mes.')
         for factura in factura_xml_records:
+            # Check if a costos.gastos.line already exists for this factura.xml
+            existing_line = self.env['costos.gastos.line'].search([
+                ('control_interno_id', '=', self.id),
+                ('factura_xml_id', '=', factura.id)
+            ], limit=1)
+            if existing_line:
+                # Skip creating a duplicate line
+                continue
             self.env['costos.gastos.line'].create({
                 'control_interno_id': self.id,
+                'factura_xml_id': factura.id,
                 'fecha_comprobante': factura.fecha,
                 'proveedor_id': factura.proveedor_id.id,
+                'proveedor_text': factura.proveedor_text,
                 'tax_id': factura.rfc,
                 'country_id': factura.pais_id.id,
                 'importe': factura.subtotal,
@@ -73,6 +106,111 @@ class ControlInternoMensual(models.Model):
                 'concepto': factura.concepto,
             })
 
+    def action_export_csv(self):
+        self.ensure_one()
+        # Prepare CSV data
+        output = StringIO()
+        writer = csv.writer(output, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+
+        # Header row
+        writer.writerow([
+            'Orden de Compra',
+            'Fecha de Pago',
+            'Tipo de Pago',
+            'Tipo de Comprobante',
+            'Folio Fiscal',
+            'No. Comprobante',
+            'Fecha de Comprobante',
+            'Concepto',
+            'Proveedor',
+            'Tax ID',
+            'País',
+            'Importe',
+            'Descuento',
+            'Moneda',
+            'Tipo de Cambio',
+            'Importe MXN',
+            'IVA',
+            'Total',
+            'Retención IVA',
+            'Otras Retenciones',
+            'Pedimento No.',
+            'IVA Pedimento',
+            'Otros Impuestos Pedimento',
+            'División en Subcuentas',
+            'Importe Subcuenta',
+            'Descuento Subcuenta',
+            'Total Subcuenta s/IVA',
+            'Descripción de Cuenta',
+            'Cuenta',
+            'Comentarios Imago',
+            'Comentarios Contador',
+        ])
+
+        # Data rows
+        for line in self.costos_gastos_ids:
+            # Handle folio_fiscal as both Many2one and Char
+            if isinstance(line.folio_fiscal, models.BaseModel):
+                folio_fiscal_uuid = line.folio_fiscal.uuid or ''
+            else:
+                folio_fiscal_uuid = line.folio_fiscal or ''
+            writer.writerow([
+                line.orden_compra_id.name or '',
+                line.fecha_pago or '',
+                line.tipo_pago or '',
+                line.tipo_comprobante or '',
+                folio_fiscal_uuid,
+                line.no_comprobante or '',
+                line.fecha_comprobante or '',
+                line.concepto or '',
+                line.proveedor_text or line.proveedor_id.name or '',
+                line.tax_id or '',
+                line.country_id.name or '',
+                line.importe or 0.0,
+                line.descuento or 0.0,
+                line.moneda_id.name or '',
+                line.tipo_cambio or 0.0,
+                line.importe_mxn or 0.0,
+                line.iva or 0.0,
+                line.total or 0.0,
+                line.retencion_iva or 0.0,
+                line.otras_retenciones or 0.0,
+                line.pedimento_no or '',
+                line.iva_pedimento or 0.0,
+                line.otros_impuestos_pedimento or 0.0,
+                line.division_subcuentas or '',
+                line.importe_subcuenta or 0.0,
+                line.descuento_subcuenta or 0.0,
+                line.total_subcuenta_sin_iva or 0.0,
+                line.descripcion_cuenta or '',
+                line.cuenta_id.display_name or '',
+                line.comentarios_imago or '',
+                line.comentarios_contador or '',
+            ])
+
+        # Get CSV content
+        csv_data = output.getvalue()
+        output.close()
+
+        # Encode to base64
+        csv_data_encoded = base64.b64encode(csv_data.encode('utf-8'))
+
+        # Create attachment
+        attachment = self.env['ir.attachment'].create({
+            'name': f'Control_Interno_{self.name}.csv',
+            'type': 'binary',
+            'datas': csv_data_encoded,
+            'res_model': 'control.interno.mensual',
+            'res_id': self.id,
+            'mimetype': 'text/csv',
+        })
+
+        # Return action to download the file
+        return {
+            'type': 'ir.actions.act_url',
+            'url': f'/web/content/{attachment.id}?download=true',
+            'target': 'self',
+        }
 
 ===== Archivo: models/factura_xml_wizard.py =====
 #models/factura.xml.wizard.py
@@ -154,8 +292,7 @@ class FacturaXMLWizard(models.TransientModel):
             ])
 
         proveedor = self.env['res.partner'].search([('vat', '=', rfc)], limit=1)
-        """if not proveedor:
-            proveedor = self.env['res.partner'].create({'name': nombre, 'vat': rfc}) """
+        
 
         moneda_id = self.env['res.currency'].search([('name', '=', moneda)], limit=1)
 
@@ -189,42 +326,40 @@ class FacturaXMLPurchaseOrderWizard(models.TransientModel):
     _description = 'Asistente para vincular Órdenes de Compra con Factura XML'
 
     factura_xml_id = fields.Many2one('factura.xml', string='Factura XML', required=True)
-    purchase_order_id = fields.Many2one('purchase.order', string='Orden de Compra', required=True)
+    purchase_order_id = fields.Many2one('purchase.order', string='Orden de Compra', domain="[('id', 'in', suggested_purchase_order_ids)]")
+
     suggested_purchase_order_ids = fields.Many2many(
         'purchase.order',
         string='Órdenes de Compra Sugeridas',
+        related='factura_xml_id.suggested_purchase_order_ids',
         readonly=True,
     )
-    suggested_purchase_order_ids_ordered = fields.Char(string='IDs Ordenados', readonly=True)
-
-    @api.model
-    def default_get(self, fields):
-        res = super(FacturaXMLPurchaseOrderWizard, self).default_get(fields)
-        factura_xml = self.env['factura.xml'].browse(self._context.get('default_factura_xml_id'))
-        res['suggested_purchase_order_ids'] = [(6, 0, factura_xml.suggested_purchase_order_ids.ids)]
-        res['suggested_purchase_order_ids_ordered'] = ','.join(map(str, factura_xml.suggested_purchase_order_ids.ids))
-        return res
 
     def action_link_purchase_order(self):
         self.ensure_one()
         if not self.purchase_order_id:
             raise UserError('Debe seleccionar una Orden de Compra.')
+        # Vincular la Orden de Compra a la factura.xml
         self.factura_xml_id.ordenes_compra_ids = [(4, self.purchase_order_id.id)]
+
+        # Sincronizar las líneas de Control Interno
+        self._sync_control_interno_lines()
+
         return {'type': 'ir.actions.act_window_close'}
 
-    def action_suggest_purchase_orders(self):
-        self.ensure_one()
-        # Abrir un asistente para mostrar las sugerencias
-        return {
-            'name': 'Sugerir Órdenes de Compra',
-            'type': 'ir.actions.act_window',
-            'res_model': 'factura.xml.purchase.order.wizard',
-            'view_mode': 'form',
-            'target': 'new',
-            'context': {
-                'default_factura_xml_id': self.id,
-            },
-        }
+    def _sync_control_interno_lines(self):
+        factura = self.factura_xml_id
+        purchase_order = self.purchase_order_id
+        
+        # Buscar líneas de control interno relacionadas con esta factura
+        control_interno_lines = self.env['costos.gastos.line'].search([
+            ('factura_xml_id', '=', factura.id)  # Asumiendo que existe este campo
+        ])
+
+        for line in control_interno_lines:
+            line.orden_compra_id = purchase_order.id
+            line._load_data_from_purchase_order()
+
 
 ===== Archivo: models/__init__.py =====
 #models/__init__.py
@@ -234,13 +369,85 @@ from . import factura_xml
 from . import catalogo_cuentas
 from . import factura_xml_wizard
 from . import factura_xml_purchase_order_wizard
-#from . import purchase_order_suggestion  
+from . import costos_gastos_line_wizard
+from . import purchase_order  # Add this line
+from . import catalogo_cuentas_import_wizard
+#from . import purchase_order_suggestion    
+
+
+===== Archivo: models/catalogo_cuentas_import_wizard.py =====
+# models/catalogo_cuentas_import_wizard.py
+
+from odoo import models, fields, api
+from odoo.exceptions import UserError
+import base64
+import csv
+import io
+
+class CatalogoCuentasImportWizard(models.TransientModel):
+    _name = 'catalogo.cuentas.import.wizard'
+    _description = 'Importar Catálogo de Cuentas desde CSV'
+
+    csv_file = fields.Binary(string='Archivo CSV', required=True)
+    filename = fields.Char(string='Nombre del Archivo')
+
+    def action_import(self):
+        if not self.csv_file:
+            raise UserError('Debe seleccionar un archivo CSV.')
+
+        # Decode the uploaded file
+        file_content = base64.b64decode(self.csv_file)
+        file_content = file_content.decode('utf-8')
+        csv_reader = csv.reader(io.StringIO(file_content))
+
+        # Skip header if present
+        # header = next(csv_reader, None)
+
+        catalogo_cuentas_obj = self.env['catalogo.cuentas']
+        for row in csv_reader:
+            # Assuming the CSV columns are: numero_cuenta, nombre_cuenta, descripcion
+            if len(row) >= 2:
+                numero_cuenta = row[0].strip()
+                nombre_cuenta = row[1].strip()
+                descripcion = row[2].strip() if len(row) > 2 else ''
+
+                # Check if the account already exists
+                existing_account = catalogo_cuentas_obj.search([('numero_cuenta', '=', numero_cuenta)], limit=1)
+                if existing_account:
+                    # Update existing account
+                    existing_account.write({
+                        'nombre_cuenta': nombre_cuenta,
+                        'descripcion': descripcion,
+                    })
+                else:
+                    # Create new account
+                    catalogo_cuentas_obj.create({
+                        'numero_cuenta': numero_cuenta,
+                        'nombre_cuenta': nombre_cuenta,
+                        'descripcion': descripcion,
+                    })
+            else:
+                # Skip rows that don't have enough columns
+                continue
+
+        return {'type': 'ir.actions.act_window_close'}
+
+
+===== Archivo: models/purchase_order.py =====
+# models/purchase_order.py
+
+from odoo import models, fields
+
+class PurchaseOrder(models.Model):
+    _inherit = 'purchase.order'
+
+    control_interno = fields.Boolean(string='Control Interno', default=False)
 
 
 ===== Archivo: models/catalogo_cuentas.py =====
 #models/catalogo_cuentas.py
 
-from odoo import models, fields
+from odoo import models, fields, api
 
 class CatalogoCuentas(models.Model):
     _name = 'catalogo.cuentas'
@@ -250,17 +457,33 @@ class CatalogoCuentas(models.Model):
     numero_cuenta = fields.Char(string='Número de Cuenta', required=True)
     descripcion = fields.Text(string='Descripción')
 
+    def name_get(self):
+        result = []
+        for cuenta in self:
+            name = f"[{cuenta.numero_cuenta}] {cuenta.nombre_cuenta}"
+            result.append((cuenta.id, name))
+        return result
+
+    @api.model
+    def name_search(self, name, args=None, operator='ilike', limit=100):
+        args = args or []
+        domain = args + ['|', ('numero_cuenta', operator, name), ('nombre_cuenta', operator, name)]
+        records = self.search(domain, limit=limit)
+        return records.name_get()
 
 ===== Archivo: models/costos_gastos_line.py =====
 #models/costos_gastos_line.py
 
 from odoo import models, fields, api
+from odoo.exceptions import UserError
+
 
 class CostosGastosLine(models.Model):
     _name = 'costos.gastos.line'
     _description = 'Línea de Costos y Gastos'
 
     control_interno_id = fields.Many2one('control.interno.mensual', string='Control Interno')
+    factura_xml_id = fields.Many2one('factura.xml', string='Factura XML')  # Nueva relación
     orden_compra_id = fields.Many2one('purchase.order', string='Orden de Compra')
     fecha_pago = fields.Date(string='Fecha de Pago')
     tipo_pago = fields.Selection([
@@ -287,6 +510,7 @@ class CostosGastosLine(models.Model):
     fecha_comprobante = fields.Date(string='Fecha de Comprobante')
     concepto = fields.Char(string='Concepto')
     proveedor_id = fields.Many2one('res.partner', string='Proveedor')
+    proveedor_text = fields.Char(string='Proveedor Texto')
     tax_id = fields.Char(string='TAX ID')
     country_id = fields.Many2one('res.country', string='País')
     importe = fields.Float(string='Importe')
@@ -310,6 +534,20 @@ class CostosGastosLine(models.Model):
     comentarios_imago = fields.Text(string='Comentarios Imago Aerospace')
     comentarios_contador = fields.Text(string='Comentarios Contador')
 
+    orden_compra_changed = fields.Boolean(string='Orden de Compra Cambiada', default=False, compute='_compute_orden_compra_changed', store=False)
+
+    @api.depends('orden_compra_id')
+    def _compute_orden_compra_changed(self):
+        for record in self:
+            if record.id:
+                original = self.env['costos.gastos.line'].browse(record.id)
+                if original.exists() and original.orden_compra_id != record.orden_compra_id:
+                    record.orden_compra_changed = True
+                else:
+                    record.orden_compra_changed = False
+            else:
+                record.orden_compra_changed = False
+
     @api.depends('importe', 'tipo_cambio')
     def _compute_importe_mxn(self):
         for record in self:
@@ -320,6 +558,118 @@ class CostosGastosLine(models.Model):
             else:
                 record.importe_mxn = record.importe
 
+    @api.onchange('orden_compra_id')
+    def _onchange_orden_compra_id(self):
+        if self.orden_compra_id and not self.id:
+            # Es un nuevo registro, cargar datos automáticamente
+            self._load_data_from_purchase_order()
+        # No realizar nada para registros existente
+                
+
+    def _load_data_from_purchase_order(self):
+        po = self.orden_compra_id
+        # Only fill fields that are empty
+        #if not self.fecha_pago:
+        #    self.fecha_pago = po.date_order
+        if not self.proveedor_id:
+            self.proveedor_id = po.partner_id
+        if not self.tax_id:
+            self.tax_id = po.partner_id.vat
+        if not self.moneda_id:
+            self.moneda_id = po.currency_id
+        if not self.importe:
+            self.importe = po.amount_untaxed
+        if not self.iva:
+            self.iva = po.amount_tax
+        if not self.total:
+            self.total = po.amount_total
+        if not self.proveedor_text:
+            self.proveedor_text = po.partner_id.name
+
+    def action_load_data_from_purchase_order(self):
+        if not self.orden_compra_id:
+            raise UserError('Debe seleccionar una Orden de Compra.')
+        # Abrir el wizard
+        return {
+            'name': 'Confirmar Carga de Datos',
+            'type': 'ir.actions.act_window',
+            'res_model': 'costos.gastos.line.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_line_id': self.id,
+            },
+        }
+    
+    @api.model
+    def create(self, vals):
+        res = super(CostosGastosLine, self).create(vals)
+        if res.orden_compra_id:
+            res.orden_compra_id.control_interno = True
+        return res
+
+    def write(self, vals):
+        # Store previous purchase orders
+        previous_orders = {line.id: line.orden_compra_id for line in self}
+        res = super(CostosGastosLine, self).write(vals)
+        for line in self:
+            prev_po = previous_orders.get(line.id)
+            new_po = line.orden_compra_id
+            if prev_po != new_po:
+                # Update 'control_interno' in previous PO if no other lines reference it
+                if prev_po and not self.search([('orden_compra_id', '=', prev_po.id)]):
+                    prev_po.control_interno = False
+                # Set 'control_interno' in new PO
+                if new_po:
+                    new_po.control_interno = True
+        return res
+
+    def unlink(self):
+        purchase_orders = self.mapped('orden_compra_id')
+        res = super(CostosGastosLine, self).unlink()
+        for po in purchase_orders:
+            if not self.search([('orden_compra_id', '=', po.id)]):
+                po.control_interno = False
+        return res
+    
+    @api.onchange('factura_xml_id')
+    def _onchange_factura_xml_id(self):
+        if self.factura_xml_id:
+            factura = self.factura_xml_id
+            # Fill in fields if they are empty
+            if not self.folio_fiscal:
+                self.folio_fiscal = factura.uuid
+            if not self.fecha_comprobante:
+                self.fecha_comprobante = factura.fecha
+            if not self.proveedor_id:
+                self.proveedor_id = factura.proveedor_id
+            if not self.proveedor_text:
+                self.proveedor_text = factura.proveedor_text
+            if not self.tax_id:
+                self.tax_id = factura.rfc
+            if not self.country_id:
+                self.country_id = factura.pais_id
+            if not self.importe:
+                self.importe = factura.subtotal
+            if not self.descuento:
+                self.descuento = factura.descuento
+            if not self.moneda_id:
+                self.moneda_id = factura.moneda_id
+            if not self.tipo_cambio:
+                self.tipo_cambio = factura.tipo_cambio
+            if not self.iva:
+                self.iva = factura.iva
+            if not self.total:
+                self.total = factura.total
+            if not self.no_comprobante:
+                self.no_comprobante = factura.folio
+            if not self.concepto:
+                self.concepto = factura.concepto
+            # If 'orden_compra_id' is empty, set it from 'factura.xml'
+            if not self.orden_compra_id and factura.ordenes_compra_ids:
+                self.orden_compra_id = factura.ordenes_compra_ids[0]
+                self._load_data_from_purchase_order()
+
 
 ===== Archivo: models/factura_xml.py =====
 #models/factura_xml.py
@@ -328,11 +678,13 @@ from odoo import models, fields, api
 from odoo.exceptions import UserError
 import difflib 
 from datetime import timedelta, datetime
+from dateutil.relativedelta import relativedelta
 
 import base64
 import zipfile
 import io
 import xml.etree.ElementTree as ET
+
 
 class FacturaXML(models.Model):
     _name = 'factura.xml'
@@ -342,8 +694,8 @@ class FacturaXML(models.Model):
     uuid = fields.Char(string='UUID')
     folio = fields.Char(string='Folio')
     fecha = fields.Date(string='Fecha')
-    proveedor_text = fields.Char(string='Proveedor Odoo')
-    proveedor_id = fields.Many2one('res.partner', string='Proveedor')
+    proveedor_text = fields.Char(string='Proveedor')
+    proveedor_id = fields.Many2one('res.partner', string='Proveedor Odoo')
     rfc = fields.Char(string='RFC')
     pais_id = fields.Many2one('res.country', string='País')
     subtotal = fields.Float(string='Subtotal')
@@ -438,11 +790,12 @@ class FacturaXML(models.Model):
         # Ordenar las sugerencias por puntaje
         suggestions = sorted(suggestions, key=lambda x: x['score'], reverse=True)
         return suggestions
- 
+
     def _compute_suggested_purchase_orders(self):
         for record in self:
-            suggestions = []
+            suggestions = self.env['purchase.order']
             if not record.fecha:
+                # Si no hay fecha en la factura, no podemos limitar por fecha
                 continue
 
             # Obtener la fecha de la factura
@@ -452,8 +805,9 @@ class FacturaXML(models.Model):
             start_date = (invoice_date.replace(day=1) - timedelta(days=1)).replace(day=1)
 
             # Calcular el último día del mes posterior
-            next_month = invoice_date.replace(day=28) + timedelta(days=4)
+            next_month = invoice_date.replace(day=28) + timedelta(days=4)  # asegura estar en el siguiente mes
             end_date = (next_month + timedelta(days=31)).replace(day=1) - timedelta(days=1)
+
 
             # Buscar órdenes de compra dentro del rango de fechas
             domain = [
@@ -480,31 +834,51 @@ class FacturaXML(models.Model):
                 # Coincidencia por monto
                 invoice_total = record.total or 0.0
                 po_total = po.amount_total or 0.0
-                if invoice_total > 0 and abs(invoice_total - po_total) / invoice_total < 0.1:
+                if invoice_total > 0 and abs(invoice_total - po_total) / invoice_total < 0.1:  # 10% de tolerancia
                     score += 2
                 # Coincidencia por fecha (dentro de 7 días)
                 if record.fecha and po.date_order:
                     date_diff = abs((record.fecha - po.date_order.date()).days)
                     if date_diff <= 7:
                         score += 1
-                    # Nueva regla: Coincidencia dentro del mismo mes y año
-                    if record.fecha.month == po.date_order.month and record.fecha.year == po.date_order.year:
-                        score += 2  # Más puntos por estar en el mismo mes y año
-                if score > 0:
-                    suggestions.append({'po': po, 'score': score})
+                if score >= 4:  # Umbral para considerar una sugerencia
+                    suggestions |= po
+            record.suggested_purchase_order_ids = suggestions
 
-            # Ordenar las sugerencias por puntaje, de mayor a menor
-            suggestions = sorted(suggestions, key=lambda x: x['score'], reverse=True)
-            # Asignar las órdenes de compra sugeridas
-            record.suggested_purchase_order_ids = [s['po'].id for s in suggestions]
-    #xml_file = fields.Binary(string='Archivo XML')
-    #zip_file = fields.Binary(string='Archivo ZIP')
-
+    def write(self, vals):
+        res = super(FacturaXML, self).write(vals)
+        if 'ordenes_compra_ids' in vals:
+            for factura in self:
+                # Get the first related purchase order, if any
+                purchase_order = factura.ordenes_compra_ids[:1]
+                # Find related costos.gastos.line records
+                control_interno_lines = self.env['costos.gastos.line'].search([
+                    ('factura_xml_id', '=', factura.id)
+                ])
+                for line in control_interno_lines:
+                    line.orden_compra_id = purchase_order.id if purchase_order else False
+        return res
     
+    
+    def name_get(self):
+        result = []
+        for record in self:
+            name = f"{record.uuid or ''} - {record.proveedor_text or ''} - {record.folio or ''}"
+            result.append((record.id, name))
+        return result
+
+    @api.model
+    def name_search(self, name, args=None, operator='ilike', limit=100):
+        args = args or []
+        domain = args + ['|', '|',
+                         ('uuid', operator, name),
+                         ('proveedor_text', operator, name),
+                         ('folio', operator, name)]
+        records = self.search(domain, limit=limit)
+        return records.name_get()
 
 ===== Archivo: __manifest__.py =====
 #__manifest__.py
-
 {
     'name': 'Control Interno',
     'version': '1.0',
@@ -517,6 +891,9 @@ class FacturaXML(models.Model):
         'views/factura_xml_views.xml',
         'views/catalogo_cuentas_views.xml',
         'views/factura_xml_purchase_order_wizard_views.xml',
+        'views/costos_gastos_line_wizard_views.xml',  # Nueva vista
+        'views/purchase_order_inherit_views.xml',
+        'views/catalogo_cuentas_import_wizard_views.xml',
         'views/control_interno_menus.xml',
     ],
     'installable': True,
@@ -546,9 +923,10 @@ class FacturaXML(models.Model):
                     <button string="Cancelar" class="btn-secondary" special="cancel"/>
                 </footer>
             </form>
-        </field>         
+        </field>
     </record>
 </odoo>
+
 
 
 
@@ -561,7 +939,8 @@ class FacturaXML(models.Model):
         <field name="name">costos.gastos.line.tree</field>
         <field name="model">costos.gastos.line</field>
         <field name="arch" type="xml">
-            <tree string="Costos y Gastos" editable="bottom">
+            <tree string="Costos y Gastos" editable="bottom" default_order="fecha_comprobante asc">
+                <field name="factura_xml_id" string="Factura XML"/>
                 <field name="orden_compra_id"/>
                 <field name="fecha_pago"/>
                 <field name="tipo_pago"/>
@@ -570,7 +949,7 @@ class FacturaXML(models.Model):
                 <field name="no_comprobante"/>
                 <field name="fecha_comprobante"/>
                 <field name="concepto"/>
-                <field name="proveedor_id"/>
+                <field name="proveedor_text"/>
                 <field name="tax_id"/>
                 <field name="country_id"/>
                 <field name="importe"/>
@@ -603,8 +982,10 @@ class FacturaXML(models.Model):
         <field name="model">costos.gastos.line</field>
         <field name="arch" type="xml">
             <form string="Costo o Gasto">
+                
                 <sheet>
                     <group>
+                        <field name="factura_xml_id" string="Factura XML"/>
                         <field name="orden_compra_id"/>
                         <field name="fecha_pago"/>
                         <field name="tipo_pago"/>
@@ -613,7 +994,8 @@ class FacturaXML(models.Model):
                         <field name="no_comprobante"/>
                         <field name="fecha_comprobante"/>
                         <field name="concepto"/>
-                        <field name="proveedor_id"/>
+                        <field name="proveedor_text"/>
+                        <field name="proveedor_id" hidden="true"/>
                         <field name="tax_id"/>
                         <field name="country_id"/>
                     </group>
@@ -674,6 +1056,7 @@ class FacturaXML(models.Model):
                     </notebook>
                     <footer>
                         <button name="cargar_datos_desde_xml" type="object" string="Cargar datos desde facturas del mes (XML)" class="btn-primary"/>
+                        <button name="action_export_csv" type="object" string="Exportar a CSV" class="btn-secondary"/>
                     </footer>
                 </sheet>
             </form>
@@ -726,6 +1109,34 @@ class FacturaXML(models.Model):
         <field name="res_model">catalogo.cuentas</field>
         <field name="view_mode">tree,form</field>
     </record>
+
+    <record id="action_catalogo_cuentas_import_wizard" model="ir.actions.act_window">
+        <field name="name">Importar Catálogo de Cuentas</field>
+        <field name="res_model">catalogo.cuentas.import.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+   <!-- Server action to open the wizard, bound to the catalogo.cuentas model -->
+    <!-- <record id="server_action_import_catalogo_cuentas" model="ir.actions.server">
+        <field name="name">Importar Catálogo de Cuentas</field>
+        <field name="model_id" ref="model_catalogo_cuentas"/>
+        <field name="binding_model_id" eval="False"/>
+        <field name="action_id" ref="action_catalogo_cuentas"/>
+        <field name="binding_type">action</field>
+        <field name="state">code</field>
+        <field name="code">
+            action = {
+                'type': 'ir.actions.act_window',
+                'name': 'Importar Catálogo de Cuentas',
+                'res_model': 'catalogo.cuentas.import.wizard',
+                'view_mode': 'form',
+                'target': 'new',
+            }
+        </field>
+
+    </record> -->
+
 </odoo>
 
 
@@ -825,6 +1236,50 @@ class FacturaXML(models.Model):
 </odoo>
 
 
+===== Archivo: views/catalogo_cuentas_import_wizard_views.xml =====
+<!-- views/catalogo_cuentas_import_wizard_views.xml -->
+
+<odoo>
+    <record id="view_catalogo_cuentas_import_wizard_form" model="ir.ui.view">
+        <field name="name">catalogo.cuentas.import.wizard.form</field>
+        <field name="model">catalogo.cuentas.import.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Importar Catálogo de Cuentas">
+                <group>
+                    <field name="csv_file" filename="filename"/>
+                </group>
+                <footer>
+                    <button name="action_import" type="object" string="Importar" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>
+
+
+===== Archivo: views/costos_gastos_line_wizard_views.xml =====
+<!-- views/costos_gastos_line_wizard_views.xml -->
+
+<odoo>
+    <record id="view_costos_gastos_line_wizard_form" model="ir.ui.view">
+        <field name="name">costos.gastos.line.wizard.form</field>
+        <field name="model">costos.gastos.line.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Confirmar Carga de Datos">
+                <group>
+                    <p>¿Desea cargar los datos de la Orden de Compra seleccionada en esta línea?</p>
+                </group>
+                <footer>
+                    <button string="Sí" type="object" name="action_confirm" class="btn-primary"/>
+                    <button string="No" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>
+
+
 ===== Archivo: views/control_interno_menus.xml =====
 <!--views/control_interno_menus.xml
 -->
@@ -833,7 +1288,39 @@ class FacturaXML(models.Model):
     <menuitem id="menu_control_interno_mensual" name="Control Interno Mensual" parent="menu_control_interno" action="action_control_interno_mensual"/>
     <menuitem id="menu_ver_facturas_xml" name="Ver Facturas XML" parent="menu_control_interno" action="action_factura_xml"/>
     <menuitem id="menu_cargar_facturas_xml" name="Cargar Facturas XML" parent="menu_control_interno" action="action_factura_xml_wizard"/>
-    <menuitem id="menu_catalogo_cuentas" name="Catálogo de Cuentas" parent="menu_control_interno" action="action_catalogo_cuentas"/>
+    <menuitem id="menu_catalogo_cuentas" name="Catálogo de Cuentas" parent="menu_control_interno"/>
+    <menuitem id="menu_ver_catalogo_cuentas" name="Ver Catálogo de Cuentas" parent="menu_catalogo_cuentas" action="action_catalogo_cuentas"/>
+    <menuitem id="menu_import_catalogo_cuentas" name="Importar Catálogo de Cuentas" parent="menu_catalogo_cuentas" action="action_catalogo_cuentas_import_wizard"/>
+    <!-- Move the child menu item here -->
 </odoo>
 
+
+===== Archivo: views/purchase_order_inherit_views.xml =====
+<!-- views/purchase_order_inherit_views.xml -->
+
+<odoo>
+    <!-- Inherit the Purchase Order form view to add the 'Control Interno' field -->
+    <record id="view_purchase_order_form_inherit_control_interno" model="ir.ui.view">
+        <field name="name">purchase.order.form.inherit.control.interno</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet/group" position="inside">
+                <field name="control_interno"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Inherit the Purchase Order tree view to add the 'Control Interno' field -->
+    <record id="view_purchase_order_tree_inherit_control_interno" model="ir.ui.view">
+        <field name="name">purchase.order.tree.inherit.control.interno</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//tree/field[@name='date_order']" position="after">
+                <field name="control_interno"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>
 

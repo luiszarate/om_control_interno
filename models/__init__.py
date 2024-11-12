@@ -6,4 +6,6 @@ from . import catalogo_cuentas
 from . import factura_xml_wizard
 from . import factura_xml_purchase_order_wizard
 from . import costos_gastos_line_wizard
+from . import purchase_order  # Add this line
+from . import catalogo_cuentas_import_wizard
 #from . import purchase_order_suggestion    

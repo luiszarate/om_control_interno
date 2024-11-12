@@ -1,0 +1,27 @@
+<!-- views/purchase_order_inherit_views.xml -->
+
+<odoo>
+    <!-- Inherit the Purchase Order form view to add the 'Control Interno' field -->
+    <record id="view_purchase_order_form_inherit_control_interno" model="ir.ui.view">
+        <field name="name">purchase.order.form.inherit.control.interno</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet/group" position="inside">
+                <field name="control_interno"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Inherit the Purchase Order tree view to add the 'Control Interno' field -->
+    <record id="view_purchase_order_tree_inherit_control_interno" model="ir.ui.view">
+        <field name="name">purchase.order.tree.inherit.control.interno</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//tree/field[@name='date_order']" position="after">
+                <field name="control_interno"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

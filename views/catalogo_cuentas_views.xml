@@ -34,4 +34,32 @@
         <field name="res_model">catalogo.cuentas</field>
         <field name="view_mode">tree,form</field>
     </record>
+
+    <record id="action_catalogo_cuentas_import_wizard" model="ir.actions.act_window">
+        <field name="name">Importar Catálogo de Cuentas</field>
+        <field name="res_model">catalogo.cuentas.import.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+   <!-- Server action to open the wizard, bound to the catalogo.cuentas model -->
+    <!-- <record id="server_action_import_catalogo_cuentas" model="ir.actions.server">
+        <field name="name">Importar Catálogo de Cuentas</field>
+        <field name="model_id" ref="model_catalogo_cuentas"/>
+        <field name="binding_model_id" eval="False"/>
+        <field name="action_id" ref="action_catalogo_cuentas"/>
+        <field name="binding_type">action</field>
+        <field name="state">code</field>
+        <field name="code">
+            action = {
+                'type': 'ir.actions.act_window',
+                'name': 'Importar Catálogo de Cuentas',
+                'res_model': 'catalogo.cuentas.import.wizard',
+                'view_mode': 'form',
+                'target': 'new',
+            }
+        </field>
+
+    </record> -->
+
 </odoo>

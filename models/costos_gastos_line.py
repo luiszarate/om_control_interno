@@ -36,6 +36,7 @@ class CostosGastosLine(models.Model):
     fecha_comprobante = fields.Date(string='Fecha de Comprobante')
     concepto = fields.Char(string='Concepto')
     proveedor_id = fields.Many2one('res.partner', string='Proveedor')
+    proveedor_text = fields.Char(string='Proveedor Texto')
     tax_id = fields.Char(string='TAX ID')
     country_id = fields.Many2one('res.country', string='País')
     importe = fields.Float(string='Importe')
@@ -93,15 +94,23 @@ class CostosGastosLine(models.Model):
 
     def _load_data_from_purchase_order(self):
         po = self.orden_compra_id
-        self.fecha_pago = po.date_order
-        self.proveedor_id = po.partner_id
-        self.tax_id = po.partner_id.vat
-        self.moneda_id = po.currency_id
-        self.importe = po.amount_untaxed
-        self.iva = po.amount_tax
-        self.total = po.amount_total
-        # Asigna 'tipo_pago' según tu lógica o déjalo para que el usuario lo complete
-        # self.tipo_pago = ...
+        # Only fill fields that are empty
+        #if not self.fecha_pago:
+        #    self.fecha_pago = po.date_order
+        if not self.proveedor_id:
+            self.proveedor_id = po.partner_id
+        if not self.tax_id:
+            self.tax_id = po.partner_id.vat
+        if not self.moneda_id:
+            self.moneda_id = po.currency_id
+        if not self.importe:
+            self.importe = po.amount_untaxed
+        if not self.iva:
+            self.iva = po.amount_tax
+        if not self.total:
+            self.total = po.amount_total
+        if not self.proveedor_text:
+            self.proveedor_text = po.partner_id.name
 
     def action_load_data_from_purchase_order(self):
         if not self.orden_compra_id:
@@ -117,3 +126,72 @@ class CostosGastosLine(models.Model):
                 'default_line_id': self.id,
             },
         }
+    
+    @api.model
+    def create(self, vals):
+        res = super(CostosGastosLine, self).create(vals)
+        if res.orden_compra_id:
+            res.orden_compra_id.control_interno = True
+        return res
+
+    def write(self, vals):
+        # Store previous purchase orders
+        previous_orders = {line.id: line.orden_compra_id for line in self}
+        res = super(CostosGastosLine, self).write(vals)
+        for line in self:
+            prev_po = previous_orders.get(line.id)
+            new_po = line.orden_compra_id
+            if prev_po != new_po:
+                # Update 'control_interno' in previous PO if no other lines reference it
+                if prev_po and not self.search([('orden_compra_id', '=', prev_po.id)]):
+                    prev_po.control_interno = False
+                # Set 'control_interno' in new PO
+                if new_po:
+                    new_po.control_interno = True
+        return res
+
+    def unlink(self):
+        purchase_orders = self.mapped('orden_compra_id')
+        res = super(CostosGastosLine, self).unlink()
+        for po in purchase_orders:
+            if not self.search([('orden_compra_id', '=', po.id)]):
+                po.control_interno = False
+        return res
+    
+    @api.onchange('factura_xml_id')
+    def _onchange_factura_xml_id(self):
+        if self.factura_xml_id:
+            factura = self.factura_xml_id
+            # Fill in fields if they are empty
+            if not self.folio_fiscal:
+                self.folio_fiscal = factura.uuid
+            if not self.fecha_comprobante:
+                self.fecha_comprobante = factura.fecha
+            if not self.proveedor_id:
+                self.proveedor_id = factura.proveedor_id
+            if not self.proveedor_text:
+                self.proveedor_text = factura.proveedor_text
+            if not self.tax_id:
+                self.tax_id = factura.rfc
+            if not self.country_id:
+                self.country_id = factura.pais_id
+            if not self.importe:
+                self.importe = factura.subtotal
+            if not self.descuento:
+                self.descuento = factura.descuento
+            if not self.moneda_id:
+                self.moneda_id = factura.moneda_id
+            if not self.tipo_cambio:
+                self.tipo_cambio = factura.tipo_cambio
+            if not self.iva:
+                self.iva = factura.iva
+            if not self.total:
+                self.total = factura.total
+            if not self.no_comprobante:
+                self.no_comprobante = factura.folio
+            if not self.concepto:
+                self.concepto = factura.concepto
+            # If 'orden_compra_id' is empty, set it from 'factura.xml'
+            if not self.orden_compra_id and factura.ordenes_compra_ids:
+                self.orden_compra_id = factura.ordenes_compra_ids[0]
+                self._load_data_from_purchase_order()

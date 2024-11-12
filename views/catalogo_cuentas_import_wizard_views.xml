@@ -1,0 +1,19 @@
+<!-- views/catalogo_cuentas_import_wizard_views.xml -->
+
+<odoo>
+    <record id="view_catalogo_cuentas_import_wizard_form" model="ir.ui.view">
+        <field name="name">catalogo.cuentas.import.wizard.form</field>
+        <field name="model">catalogo.cuentas.import.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Importar Catálogo de Cuentas">
+                <group>
+                    <field name="csv_file" filename="filename"/>
+                </group>
+                <footer>
+                    <button name="action_import" type="object" string="Importar" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>
