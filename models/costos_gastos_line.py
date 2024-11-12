@@ -43,7 +43,7 @@ class CostosGastosLine(models.Model):
     descuento = fields.Float(string='Descuento')
     moneda_id = fields.Many2one('res.currency', string='Moneda')
     tipo_cambio = fields.Float(string='Tipo de Cambio')
-    importe_mxn = fields.Float(string='Importe MXN', compute='_compute_importe_mxn')
+    importe_mxn = fields.Float(string='Importe MXN')
     iva = fields.Float(string='IVA')
     total = fields.Float(string='Total')
     retencion_iva = fields.Float(string='Retención IVA')
@@ -55,12 +55,14 @@ class CostosGastosLine(models.Model):
     importe_subcuenta = fields.Float(string='Importe Subcuenta')
     descuento_subcuenta = fields.Float(string='Descuento Subcuenta')
     total_subcuenta_sin_iva = fields.Float(string='Total Subcuenta s/IVA')
-    descripcion_cuenta = fields.Text(string='Descripción de Cuenta', related='cuenta_id.descripcion', store=True)
+    descripcion_cuenta = fields.Text(string='Descripción de Cuenta', store=True)
+    cuenta_num = fields.Text(string='Numero de Cuenta', store=True)
     cuenta_id = fields.Many2one('catalogo.cuentas', string='Cuenta')
     comentarios_imago = fields.Text(string='Comentarios Imago Aerospace')
     comentarios_contador = fields.Text(string='Comentarios Contador')
 
-    orden_compra_changed = fields.Boolean(string='Orden de Compra Cambiada', default=False, compute='_compute_orden_compra_changed', store=False)
+    mes = fields.Date(related='control_interno_id.mes', store=True)
+    mes_fin = fields.Date(related='control_interno_id.mes_fin', store=True)
 
     @api.depends('orden_compra_id')
     def _compute_orden_compra_changed(self):
@@ -74,15 +76,15 @@ class CostosGastosLine(models.Model):
             else:
                 record.orden_compra_changed = False
 
-    @api.depends('importe', 'tipo_cambio')
+    @api.depends('importe', 'descuento', 'tipo_cambio', 'moneda_id')
     def _compute_importe_mxn(self):
         for record in self:
             tipo_cambio = record.tipo_cambio or 1.0
-            moneda = record.moneda_id.name if record.moneda_id else 'MXN'
-            if moneda != 'MXN':
-                record.importe_mxn = record.importe * tipo_cambio
+            importe_neto = (record.importe or 0.0) - (record.descuento or 0.0)
+            if record.moneda_id and record.moneda_id.name != 'MXN':
+                record.importe_mxn = importe_neto * tipo_cambio
             else:
-                record.importe_mxn = record.importe
+                record.importe_mxn = importe_neto
 
     @api.onchange('orden_compra_id')
     def _onchange_orden_compra_id(self):
@@ -195,3 +197,32 @@ class CostosGastosLine(models.Model):
             if not self.orden_compra_id and factura.ordenes_compra_ids:
                 self.orden_compra_id = factura.ordenes_compra_ids[0]
                 self._load_data_from_purchase_order()
+
+    @api.onchange('importe', 'descuento', 'tipo_cambio', 'moneda_id')
+    def _onchange_importe_mxn(self):
+        if self.moneda_id and self.moneda_id.name != 'MXN':
+            tipo_cambio = self.tipo_cambio or 1.0
+            importe_neto = (self.importe or 0.0) - (self.descuento or 0.0)
+            self.importe_mxn = importe_neto * tipo_cambio
+        else:
+            self.importe_mxn = (self.importe or 0.0) - (self.descuento or 0.0)
+
+    @api.onchange('control_interno_id')
+    def _onchange_control_interno_id(self):
+        domain = {}
+        if self.control_interno_id:
+            mes = self.mes
+            mes_fin = self.mes_fin
+            domain['factura_xml_id'] = [('fecha', '>=', mes), ('fecha', '<', mes_fin)]
+            domain['orden_compra_id'] = [('date_order', '>=', mes), ('date_order', '<', mes_fin), ('control_interno', '=', False)]
+        else:
+            domain['factura_xml_id'] = []
+            domain['orden_compra_id'] = [('control_interno', '=', False)]
+        return {'domain': domain}
+
+    @api.onchange('cuenta_id')
+    def _onchange_numero_cuenta(self):
+        if self.cuenta_id:
+            cuenta = self.cuenta_id
+            self.descripcion_cuenta = cuenta.nombre_cuenta
+            self.cuenta_num = cuenta.numero_cuenta

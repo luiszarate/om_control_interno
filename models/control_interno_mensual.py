@@ -16,6 +16,7 @@ class ControlInternoMensual(models.Model):
     name = fields.Char(string='Nombre', required=True)
     mes = fields.Date(string='Mes', required=True)
     costos_gastos_ids = fields.One2many('costos.gastos.line', 'control_interno_id', string='Costos y Gastos')
+    mes_fin = fields.Date(string='Fin del Mes', compute='_compute_mes_fin')
     #ingresos_ids = fields.One2many('ingresos.line', 'control_interno_id', string='Ingresos')
 
     def cargar_datos_desde_xml(self):
@@ -130,7 +131,7 @@ class ControlInternoMensual(models.Model):
                 line.descuento_subcuenta or 0.0,
                 line.total_subcuenta_sin_iva or 0.0,
                 line.descripcion_cuenta or '',
-                line.cuenta_id.display_name or '',
+                line.cuenta_num or '',
                 line.comentarios_imago or '',
                 line.comentarios_contador or '',
             ])
@@ -158,3 +159,11 @@ class ControlInternoMensual(models.Model):
             'url': f'/web/content/{attachment.id}?download=true',
             'target': 'self',
         }
+    
+    @api.depends('mes')
+    def _compute_mes_fin(self):
+        for record in self:
+            if record.mes:
+                record.mes_fin = (record.mes + relativedelta(months=1)).replace(day=1)
+            else:
+                record.mes_fin = False

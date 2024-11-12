@@ -7,38 +7,39 @@
         <field name="model">costos.gastos.line</field>
         <field name="arch" type="xml">
             <tree string="Costos y Gastos" editable="bottom" default_order="fecha_comprobante asc">
-                <field name="factura_xml_id" string="Factura XML"/>
-                <field name="orden_compra_id"/>
+                <field name="factura_xml_id" string="Factura XML"  optional="show"/>
+                <field name="orden_compra_id" />
                 <field name="fecha_pago"/>
-                <field name="tipo_pago"/>
-                <field name="tipo_comprobante"/>
-                <field name="folio_fiscal"/>
-                <field name="no_comprobante"/>
-                <field name="fecha_comprobante"/>
-                <field name="concepto"/>
-                <field name="proveedor_text"/>
-                <field name="tax_id"/>
-                <field name="country_id"/>
-                <field name="importe"/>
-                <field name="descuento"/>
-                <field name="moneda_id"/>
-                <field name="tipo_cambio"/>
-                <field name="importe_mxn"/>
-                <field name="iva"/>
-                <field name="total"/>
-                <field name="retencion_iva"/>
-                <field name="otras_retenciones"/>
-                <field name="pedimento_no"/>
-                <field name="iva_pedimento"/>
-                <field name="otros_impuestos_pedimento"/>
-                <field name="division_subcuentas"/>
-                <field name="importe_subcuenta"/>
-                <field name="descuento_subcuenta"/>
-                <field name="total_subcuenta_sin_iva"/>
-                <field name="descripcion_cuenta"/>
-                <field name="cuenta_id"/>
-                <field name="comentarios_imago"/>
-                <field name="comentarios_contador"/>
+                <field name="tipo_pago"  optional="show"/>
+                <field name="tipo_comprobante"  optional="show"/>
+                <field name="folio_fiscal"  optional="show"/>
+                <field name="no_comprobante" optional="show"/>
+                <field name="fecha_comprobante" optional="show"/>
+                <field name="concepto" optional="show"/>
+                <field name="proveedor_text" optional="show"/>
+                <field name="tax_id" optional="show"/>
+                <field name="country_id" optional="show"/>
+                <field name="importe" optional="show"/>
+                <field name="descuento" optional="show"/>
+                <field name="moneda_id" optional="show"/>
+                <field name="tipo_cambio" optional="show"/>
+                <field name="importe_mxn" optional="show"/>
+                <field name="iva" optional="show"/>
+                <field name="total" optional="show"/>
+                <field name="retencion_iva" optional="hide"/>
+                <field name="otras_retenciones" optional="hide"/>
+                <field name="pedimento_no" optional="hide"/>
+                <field name="iva_pedimento" optional="hide"/>
+                <field name="otros_impuestos_pedimento" optional="hide"/>
+                <field name="division_subcuentas" optional="hide"/>
+                <field name="importe_subcuenta" optional="hide"/>
+                <field name="descuento_subcuenta" optional="hide"/>
+                <field name="total_subcuenta_sin_iva"  optional="hide"/>
+                <field name="descripcion_cuenta" optional="show"/>
+                <field name="cuenta_num" invisible="1"/>
+                <field name="cuenta_id" optional="show"/>
+                <field name="comentarios_imago" optional="show"/>
+                <field name="comentarios_contador" optional="hide"/>
             </tree>
         </field>
     </record>
@@ -128,6 +129,28 @@
                 </sheet>
             </form>
         </field>
+    </record>
+
+    <record id="view_costos_gastos_line_search" model="ir.ui.view">
+        <field name="name">costos.gastos.line.search</field>
+        <field name="model">costos.gastos.line</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="fecha_pago"/>
+                <field name="fecha_comprobante"/>
+                <field name="control_interno_id"/>
+                <filter string="Fecha de Pago" name="filter_fecha_pago" domain="[]" context="{'group_by':'fecha_pago'}"/>
+                <filter string="Fecha de Comprobante" name="filter_fecha_comprobante" domain="[]" context="{'group_by':'fecha_comprobante'}"/>
+                <filter string="Control Interno" name="filter_control_interno" domain="[]" context="{'group_by':'control_interno_id'}"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_costos_gastos_line_all" model="ir.actions.act_window">
+        <field name="name">Líneas de Costos y Gastos</field>
+        <field name="res_model">costos.gastos.line</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_costos_gastos_line_search"/>
     </record>
 
 

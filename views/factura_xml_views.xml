@@ -77,6 +77,21 @@
         </field>
     </record>
 
+    <record id="view_factura_xml_search" model="ir.ui.view">
+        <field name="name">factura.xml.search</field>
+        <field name="model">factura.xml</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="proveedor_text"/>
+                <field name="fecha"/>
+                <field name="uuid"/>
+                <field name="proveedor_id"/>
+                <filter string="Proveedor" name="filter_proveedor" domain="[]" context="{'group_by': 'proveedor_text'}"/>
+                <filter string="Mes" name="filter_mes" domain="[]" context="{'group_by': 'fecha:month'}"/>
+            </search>
+        </field>
+    </record>
+
      <!-- Acción para abrir el asistente -->
     <record id="action_factura_xml_wizard" model="ir.actions.act_window">
         <field name="name">Cargar Facturas XML</field>
@@ -89,5 +104,6 @@
         <field name="name">Facturas XML</field>
         <field name="res_model">factura.xml</field>
         <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_factura_xml_search"/>
     </record>
 </odoo>

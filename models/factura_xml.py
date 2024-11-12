@@ -32,6 +32,7 @@ class FacturaXML(models.Model):
     total = fields.Float(string='Total')
     concepto = fields.Char(string='Concepto')
     ordenes_compra_ids = fields.Many2many('purchase.order', string='Órdenes de Compra')
+    fecha_text = fields.Char(string='Fecha (texto)', compute='_compute_fecha_text', store=True)
     
     state = fields.Selection([
         ('draft', 'Borrador'),
@@ -189,16 +190,23 @@ class FacturaXML(models.Model):
     def name_get(self):
         result = []
         for record in self:
-            name = f"{record.uuid or ''} - {record.proveedor_text or ''} - {record.folio or ''}"
+            name = f"{record.uuid or ''} - {record.proveedor_text or ''} - {record.folio or ''} - {record.fecha_text or ''}"
             result.append((record.id, name))
         return result
 
     @api.model
     def name_search(self, name, args=None, operator='ilike', limit=100):
         args = args or []
-        domain = args + ['|', '|',
+        domain = args + ['|', '|', '|', '|',
                          ('uuid', operator, name),
                          ('proveedor_text', operator, name),
-                         ('folio', operator, name)]
+                         ('folio', operator, name),
+                         ('fecha_text', operator, name),
+                         ('proveedor_id.name', operator, name)]
         records = self.search(domain, limit=limit)
         return records.name_get()
+    
+    @api.depends('fecha')
+    def _compute_fecha_text(self):
+        for record in self:
+            record.fecha_text = record.fecha.strftime('%Y-%m-%d') if record.fecha else ''
