@@ -124,6 +124,7 @@
                     </notebook>
                     <footer>
                         <button name="cargar_datos_desde_xml" type="object" string="Cargar datos desde facturas del mes (XML)" class="btn-primary"/>
+                        <button name="action_import_csv" type="object" string="Importar desde CSV" class="btn-secondary"/>
                         <button name="action_export_csv" type="object" string="Exportar a CSV" class="btn-secondary"/>
                     </footer>
                 </sheet>

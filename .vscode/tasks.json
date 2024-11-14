@@ -1,78 +1,57 @@
 {
-    "version": "2.0.0",
-    "presentation": {
-      "echo": false,
-      "reveal": "always",
-      "focus": false,
-      "panel": "dedicated",
-      "showReuseMessage": false
-    },
-    "tasks": [
-      {
-        "label": "Create terminals",
-        "dependsOn": [
-          "Copiar a folder Add Ons",
-          "Copiar a Servidor",
-          "Restart Server",
-        ],
-        // Try start the task on folder open
-        "runOptions": {
-          "runOn": "folderOpen"
-        }
-      },
-      {
-        // The name that shows up in terminal tab
-        "label": "Copiar a folder Add Ons",
-        // The task will launch a shell
-        "type": "shell",
-        "command": "/bin/zsh",
-        // Set the shell type
-        "options": {
-          "shell": {
-            "executable": "",
-            "args": [""]
-          }
-        },
-        // Mark as a background task to avoid the spinner animation on the terminal tab
-        "isBackground": true,
-        "problemMatcher": [],
-        // Create the tasks in a terminal group
-        "presentation": {
-          "group": "my-group"
-        }
-      },
-      {
-        "label": "Copiar a Servidor",
-        "type": "shell",
-        "command": "/bin/zsh",
-        "options": {
-          "shell": {
-            "executable": "",
-            "args": []
-          }
-        },
-        "isBackground": true,
-        "problemMatcher": [],
-        "presentation": {
-          "group": "my-group"
-        }
-      },
-      {
-        "label": "Restart Server",
-        "type": "shell",
-        "command": "/bin/zsh",
-        "options": {
-          "shell": {
-            "executable": "",
-            "args": []
-          }
-        },
-        "isBackground": false,
-        "problemMatcher": [],
-        "presentation": {
-          "group": "my-group2"
-        }
+  "version": "2.0.0",
+  "presentation": {
+    "echo": false,
+    "reveal": "always",
+    "focus": false,
+    "panel": "dedicated",
+    "showReuseMessage": false
+  },
+  "tasks": [
+    {
+      "label": "Create terminals",
+      "dependsOn": [
+        "Copiar a folder Add Ons",
+        "Copiar a Servidor",
+        "Restart Server"
+      ],
+      "runOptions": {
+        "runOn": "folderOpen"
       }
-    ]
-  }
-  
+    },
+    {
+      "label": "Copiar a folder Add Ons",
+      "type": "shell",
+      "command": "/bin/zsh",
+      "args": ["-c", "ssh erp"],
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "group": "my-group"
+      }
+    },
+    {
+      "label": "Copiar a Servidor",
+      "type": "shell",
+      "command": "/bin/zsh",
+      "args": [],
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "group": "my-group"
+      }
+    },
+    {
+      "label": "Restart Server",
+      "type": "shell",
+      "command": "/bin/zsh",
+      "args": ["-c", "ssh erp"],
+      "isBackground": false,
+      "problemMatcher": [],
+      "presentation": {
+        "group": "my-group2"
+      }
+    }
+  ]
+}
+

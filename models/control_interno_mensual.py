@@ -167,3 +167,16 @@ class ControlInternoMensual(models.Model):
                 record.mes_fin = (record.mes + relativedelta(months=1)).replace(day=1)
             else:
                 record.mes_fin = False
+
+    def action_import_csv(self):
+        self.ensure_one()
+        return {
+            'name': 'Importar Control Interno desde CSV',
+            'type': 'ir.actions.act_window',
+            'res_model': 'control.interno.import.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_control_interno_id': self.id,
+            },
+        }
