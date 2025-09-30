@@ -190,6 +190,10 @@ class CostosGastosLine(models.Model):
         if self.factura_xml_id:
             factura = self.factura_xml_id
             # Fill in fields if they are empty
+            if not self.tipo_pago:
+                tipo_pago = factura.get_tipo_pago_control_interno()
+                if tipo_pago:
+                    self.tipo_pago = tipo_pago
             if not self.folio_fiscal:
                 self.folio_fiscal = factura.uuid
             if not self.fecha_comprobante:

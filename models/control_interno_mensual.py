@@ -2,11 +2,11 @@
 
 from odoo import models, fields, api
 from odoo.exceptions import UserError
-from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import csv
 import base64
 from io import StringIO
+
 
 
 class ControlInternoMensual(models.Model):
@@ -51,6 +51,7 @@ class ControlInternoMensual(models.Model):
                     tipo_comprobante = 'factura_nacional'
                 else:
                     tipo_comprobante = 'factura_extranjera'
+            tipo_pago = factura.get_tipo_pago_control_interno()
             self.env['costos.gastos.line'].create({
                 'control_interno_id': self.id,
                 'factura_xml_id': factura.id,
@@ -69,6 +70,7 @@ class ControlInternoMensual(models.Model):
                 'no_comprobante': factura.folio,
                 'concepto': factura.concepto,
                 'tipo_comprobante': tipo_comprobante,
+                'tipo_pago': tipo_pago,
             })
 
     def action_export_csv(self):

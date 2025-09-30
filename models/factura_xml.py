@@ -2,7 +2,7 @@
 
 from odoo import models, fields, api
 from odoo.exceptions import UserError
-import difflib 
+import difflib
 from datetime import timedelta, datetime
 from dateutil.relativedelta import relativedelta
 
@@ -10,6 +10,28 @@ import base64
 import zipfile
 import io
 import xml.etree.ElementTree as ET
+
+
+FORMA_PAGO_TO_TIPO_PAGO = {
+    '1': 'caja_chica',
+    '01': 'caja_chica',
+    '2': 'cheque',
+    '02': 'cheque',
+    '3': 'transferencia',
+    '03': 'transferencia',
+    '4': 'credito',
+    '04': 'credito',
+    '28': 'debito',
+    '028': 'debito',
+}
+
+
+def map_forma_pago_to_tipo_pago(forma_pago):
+    forma_pago = (forma_pago or '').strip()
+    tipo_pago = FORMA_PAGO_TO_TIPO_PAGO.get(forma_pago)
+    if not tipo_pago and forma_pago.isdigit():
+        tipo_pago = FORMA_PAGO_TO_TIPO_PAGO.get(forma_pago.zfill(2))
+    return tipo_pago
 
 
 class FacturaXML(models.Model):
@@ -31,6 +53,7 @@ class FacturaXML(models.Model):
     iva = fields.Float(string='IVA')
     total = fields.Float(string='Total')
     concepto = fields.Char(string='Concepto')
+    forma_pago = fields.Char(string='Forma de Pago')
     ordenes_compra_ids = fields.Many2many('purchase.order', string='Órdenes de Compra')
     fecha_text = fields.Char(string='Fecha (texto)', compute='_compute_fecha_text', store=True)
     
@@ -60,6 +83,10 @@ class FacturaXML(models.Model):
                 'default_factura_xml_id': self.id,
             },
         }
+
+    def get_tipo_pago_control_interno(self):
+        self.ensure_one()
+        return map_forma_pago_to_tipo_pago(self.forma_pago)
     
 
     def _get_suggestions_with_scores(self):
