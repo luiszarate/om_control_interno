@@ -59,6 +59,7 @@ class FacturaXMLWizard(models.TransientModel):
         descuento = float(root.attrib.get('Descuento', '0'))
         moneda = root.attrib.get('Moneda', 'MXN')
         tipo_cambio = float(root.attrib.get('TipoCambio', '1'))
+        forma_pago = root.attrib.get('FormaPago', '')
 
         impuestos = root.find('cfdi:Impuestos', ns)
         iva = 0.0
@@ -97,4 +98,5 @@ class FacturaXMLWizard(models.TransientModel):
             'iva': iva,
             'total': total,
             'concepto': descripcion_concatenada,
+            'forma_pago': forma_pago,
         })
