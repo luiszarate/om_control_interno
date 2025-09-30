@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+  <template id="assets_backend" name="om_control_interno assets" inherit_id="web.assets_backend">
+    <xpath expr="." position="inside">
+      <script type="text/javascript" src="/om_control_interno/static/src/js/date_anchor_control_month.js"/>
+    </xpath>
+  </template>
+</odoo>

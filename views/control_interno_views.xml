@@ -7,6 +7,7 @@
         <field name="model">costos.gastos.line</field>
         <field name="arch" type="xml">
             <tree string="Costos y Gastos" editable="bottom" default_order="fecha_comprobante asc">
+                <field name="mes" invisible="1"/>
                 <field name="factura_xml_id" string="Factura XML"  optional="show"/>
                 <field name="orden_compra_id" />
                 <field name="fecha_pago" widget="date_anchor_control_month"/>
@@ -53,6 +54,7 @@
                 
                 <sheet>
                     <group>
+                        <field name="mes" invisible="1"/>
                         <field name="factura_xml_id" string="Factura XML"/>
                         <field name="orden_compra_id"/>
                         <field name="fecha_pago" widget="date_anchor_control_month"/>

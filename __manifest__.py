@@ -17,11 +17,9 @@
         'views/control_interno_import_wizard_views.xml',
         'views/control_interno_menus.xml',
     ],
-    'assets': {
-        'web.assets_backend': [
-            'om_control_interno/static/src/js/date_control_month.js',
-            'om_control_interno/static/src/js/date_anchor_control_month.js',
-        ],},
+    'qweb': [
+        'views/assets.xml',
+    ],
     'installable': True,
     'application': True,
 }
