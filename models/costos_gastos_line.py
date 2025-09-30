@@ -218,6 +218,11 @@ class CostosGastosLine(models.Model):
                 self.no_comprobante = factura.folio
             if not self.concepto:
                 self.concepto = factura.concepto
+            if not self.tipo_comprobante and factura.pais_id and factura.pais_id.code:
+                if factura.pais_id.code.upper() == 'MX':
+                    self.tipo_comprobante = 'factura_nacional'
+                else:
+                    self.tipo_comprobante = 'factura_extranjera'
             # If 'orden_compra_id' is empty, set it from 'factura.xml'
             if not self.orden_compra_id and factura.ordenes_compra_ids:
                 self.orden_compra_id = factura.ordenes_compra_ids[0]

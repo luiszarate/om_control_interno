@@ -45,6 +45,12 @@ class ControlInternoMensual(models.Model):
             if existing_line:
                 # Skip creating a duplicate line
                 continue
+            tipo_comprobante = False
+            if factura.pais_id and factura.pais_id.code:
+                if factura.pais_id.code.upper() == 'MX':
+                    tipo_comprobante = 'factura_nacional'
+                else:
+                    tipo_comprobante = 'factura_extranjera'
             self.env['costos.gastos.line'].create({
                 'control_interno_id': self.id,
                 'factura_xml_id': factura.id,
@@ -62,6 +68,7 @@ class ControlInternoMensual(models.Model):
                 'folio_fiscal': factura.uuid,
                 'no_comprobante': factura.folio,
                 'concepto': factura.concepto,
+                'tipo_comprobante': tipo_comprobante,
             })
 
     def action_export_csv(self):
