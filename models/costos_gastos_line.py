@@ -79,6 +79,16 @@ class CostosGastosLine(models.Model):
                 defaults['fecha_comprobante'] = first_day
         return defaults"""
 
+    @api.onchange('tipo_pago', 'fecha_comprobante')
+    def _onchange_tipo_pago(self):
+        """Set payment date from voucher date when using petty cash."""
+        if (
+            self.tipo_pago == 'caja_chica'
+            and not self.fecha_pago
+            and self.fecha_comprobante
+        ):
+            self.fecha_pago = self.fecha_comprobante
+
     @api.depends('orden_compra_id')
     def _compute_orden_compra_changed(self):
         for record in self:
