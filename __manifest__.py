@@ -7,6 +7,7 @@
     'depends': ['account', 'purchase'],
     'data': [
         'security/ir.model.access.csv',
+        'views/assets.xml',
         'views/control_interno_views.xml',
         'views/factura_xml_views.xml',
         'views/catalogo_cuentas_views.xml',
@@ -16,9 +17,6 @@
         'views/catalogo_cuentas_import_wizard_views.xml',
         'views/control_interno_import_wizard_views.xml',
         'views/control_interno_menus.xml',
-    ],
-    'qweb': [
-        'views/assets.xml',
     ],
     'installable': True,
     'application': True,
