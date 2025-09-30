@@ -17,6 +17,10 @@
         'views/control_interno_import_wizard_views.xml',
         'views/control_interno_menus.xml',
     ],
+    'assets': {
+        'web.assets_backend': [
+            'om_control_interno/static/src/js/date_control_month.js',
+        ],},
     'installable': True,
     'application': True,
 }

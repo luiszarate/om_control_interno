@@ -9,12 +9,12 @@
             <tree string="Costos y Gastos" editable="bottom" default_order="fecha_comprobante asc">
                 <field name="factura_xml_id" string="Factura XML"  optional="show"/>
                 <field name="orden_compra_id" />
-                <field name="fecha_pago"/>
+                <field name="fecha_pago" widget="date_control_month"/>
                 <field name="tipo_pago"  optional="show"/>
                 <field name="tipo_comprobante"  optional="show"/>
                 <field name="folio_fiscal"  optional="show"/>
                 <field name="no_comprobante" optional="show"/>
-                <field name="fecha_comprobante" optional="show"/>
+                <field name="fecha_comprobante" optional="show" widget="date_control_month"/>
                 <field name="concepto" optional="show"/>
                 <field name="proveedor_text" optional="show"/>
                 <field name="tax_id" optional="show"/>
@@ -55,12 +55,12 @@
                     <group>
                         <field name="factura_xml_id" string="Factura XML"/>
                         <field name="orden_compra_id"/>
-                        <field name="fecha_pago"/>
+                        <field name="fecha_pago" widget="date_control_month"/>
                         <field name="tipo_pago"/>
                         <field name="tipo_comprobante"/>
                         <field name="folio_fiscal"/>
                         <field name="no_comprobante"/>
-                        <field name="fecha_comprobante"/>
+                        <field name="fecha_comprobante" widget="date_control_month"/>
                         <field name="concepto"/>
                         <field name="proveedor_text"/>
                         <field name="proveedor_id" hidden="true"/>
@@ -111,7 +111,14 @@
                     </group>
                     <notebook>
                         <page string="Costos y Gastos">
-                            <field name="costos_gastos_ids" context="{'default_control_interno_id': id}" mode="tree,form">
+                            <field name="costos_gastos_ids" 
+                                context="{
+                                    'default_control_interno_id': id,
+                                    'control_month_first_day': month_first_day,
+                                    'only_on_edit': True,
+                                    'prefill_on_edit': False
+                                }"
+                                mode="tree,form">
                                 <views>
                                     <view ref="view_costos_gastos_line_tree" type="tree"/>
                                     <view ref="view_costos_gastos_line_form" type="form"/>

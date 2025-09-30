@@ -242,11 +242,11 @@ class CostosGastosLine(models.Model):
             self.descripcion_cuenta = cuenta.nombre_cuenta
             self.cuenta_num = cuenta.numero_cuenta
 
-    @api.onchange('control_interno_id')
+    """@api.onchange('control_interno_id')
     def _set_dates_on_edit_if_empty(self):
         if self.id and self.control_interno_id and self.control_interno_id.month_first_day:
             first = self.control_interno_id.month_first_day
             if not self.fecha_pago:
                 self.fecha_pago = first
             if not self.fecha_comprobante:
-                self.fecha_comprobante = first
+                self.fecha_comprobante = first"""
