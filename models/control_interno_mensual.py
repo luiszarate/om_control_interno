@@ -52,10 +52,14 @@ class ControlInternoMensual(models.Model):
                 else:
                     tipo_comprobante = 'factura_extranjera'
             tipo_pago = factura.get_tipo_pago_control_interno()
+            fecha_pago = False
+            if tipo_pago == 'caja_chica' and factura.fecha:
+                fecha_pago = factura.fecha
             self.env['costos.gastos.line'].create({
                 'control_interno_id': self.id,
                 'factura_xml_id': factura.id,
                 'fecha_comprobante': factura.fecha,
+                'fecha_pago': fecha_pago,
                 'proveedor_id': factura.proveedor_id.id,
                 'proveedor_text': factura.proveedor_text,
                 'tax_id': factura.rfc,
