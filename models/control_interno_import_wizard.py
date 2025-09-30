@@ -200,16 +200,26 @@ class ControlInternoImportWizard(models.TransientModel):
             else:
                 tipo_pago_key = False
 
+            fecha_comprobante = parse_date(data['fecha_comprobante'])
+            fecha_pago = parse_date(data['fecha_pago'])
+
+            if (
+                tipo_pago_key == 'caja_chica'
+                and not fecha_pago
+                and fecha_comprobante
+            ):
+                fecha_pago = fecha_comprobante
+
             # Crear la línea de costos y gastos
             costos_gastos_line_obj.create({
                 'control_interno_id': self.control_interno_id.id,
                 'orden_compra_id': orden_compra.id if orden_compra else False,
-                'fecha_pago': parse_date(data['fecha_pago']),
+                'fecha_pago': fecha_pago,
                 'tipo_pago': tipo_pago_key,
                 'tipo_comprobante': tipo_comprobante_key,
                 'folio_fiscal': data['folio_fiscal'],
                 'no_comprobante': data['no_comprobante'],
-                'fecha_comprobante': parse_date(data['fecha_comprobante']),
+                'fecha_comprobante': fecha_comprobante,
                 'concepto': data['concepto'],
                 'proveedor_id': proveedor.id if proveedor else False,
                 'proveedor_text': data['proveedor_text'],
