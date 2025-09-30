@@ -64,6 +64,21 @@ class CostosGastosLine(models.Model):
     mes = fields.Date(related='control_interno_id.mes', store=True)
     mes_fin = fields.Date(related='control_interno_id.mes_fin', store=True)
 
+    @api.model
+    def default_get(self, fields_list):
+        defaults = super().default_get(fields_list)
+        control_id = defaults.get('control_interno_id') or self.env.context.get('default_control_interno_id')
+        control = self.env['control.interno.mensual']
+        if control_id:
+            control = control.browse(control_id)
+        if control and control.exists() and control.mes:
+            first_day = control.mes.replace(day=1)
+            if 'fecha_pago' in fields_list and not defaults.get('fecha_pago'):
+                defaults['fecha_pago'] = first_day
+            if 'fecha_comprobante' in fields_list and not defaults.get('fecha_comprobante'):
+                defaults['fecha_comprobante'] = first_day
+        return defaults
+
     @api.depends('orden_compra_id')
     def _compute_orden_compra_changed(self):
         for record in self:
