@@ -17,7 +17,17 @@ class ControlInternoMensual(models.Model):
     mes = fields.Date(string='Mes', required=True)
     costos_gastos_ids = fields.One2many('costos.gastos.line', 'control_interno_id', string='Costos y Gastos')
     mes_fin = fields.Date(string='Fin del Mes', compute='_compute_mes_fin')
+    month_first_day = fields.Date(
+        string='Primer día del mes',
+        compute='_compute_month_first_day',
+        store=False,
+    )
     #ingresos_ids = fields.One2many('ingresos.line', 'control_interno_id', string='Ingresos')
+
+    @api.depends('mes')
+    def _compute_month_first_day(self):
+        for rec in self:
+            rec.month_first_day = rec.mes and fields.Date.to_date(rec.mes).replace(day=1) or False
 
     def cargar_datos_desde_xml(self):
         factura_xml_records = self.env['factura.xml'].search([
