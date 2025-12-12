@@ -48,6 +48,11 @@ class FacturaXMLWizard(models.TransientModel):
             if tfd is not None:
                 uuid = tfd.get('UUID', '')
 
+        if uuid:
+            existing_invoice = self.env['factura.xml'].search([('uuid', '=', uuid)], limit=1)
+            if existing_invoice:
+                return False
+
         emisor = root.find('cfdi:Emisor', ns)
         rfc = emisor.get('Rfc', '') if emisor is not None else ''
         nombre = emisor.get('Nombre', '') if emisor is not None else ''
@@ -100,3 +105,5 @@ class FacturaXMLWizard(models.TransientModel):
             'concepto': descripcion_concatenada,
             'forma_pago': forma_pago,
         })
+
+        return True
