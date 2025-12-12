@@ -63,6 +63,10 @@ class FacturaXML(models.Model):
         ('cancelled', 'Cancelado'),
     ], string='Estado', default='draft', tracking=True)
 
+    _sql_constraints = [
+        ('uuid_unique', 'unique(uuid)', 'Ya existe una factura con este UUID.'),
+    ]
+
     suggested_purchase_order_ids = fields.Many2many(
         'purchase.order',
         string='Órdenes de Compra Sugeridas',
