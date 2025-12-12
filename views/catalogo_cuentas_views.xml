@@ -29,10 +29,22 @@
         </field>
     </record>
 
+    <record id="view_catalogo_cuentas_search" model="ir.ui.view">
+        <field name="name">catalogo.cuentas.search</field>
+        <field name="model">catalogo.cuentas</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Cuentas">
+                <field name="nombre_cuenta"/>
+                <field name="numero_cuenta"/>
+            </search>
+        </field>
+    </record>
+
     <record id="action_catalogo_cuentas" model="ir.actions.act_window">
         <field name="name">Catálogo de Cuentas</field>
         <field name="res_model">catalogo.cuentas</field>
         <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_catalogo_cuentas_search"/>
     </record>
 
     <record id="action_catalogo_cuentas_import_wizard" model="ir.actions.act_window">
