@@ -5,6 +5,7 @@ from odoo import models, fields, api
 class CatalogoCuentas(models.Model):
     _name = 'catalogo.cuentas'
     _description = 'Catálogo de Cuentas'
+    _rec_name = 'nombre_cuenta'
 
     nombre_cuenta = fields.Char(string='Nombre de Cuenta', required=True)
     numero_cuenta = fields.Char(string='Número de Cuenta', required=True)
