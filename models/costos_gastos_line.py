@@ -279,17 +279,6 @@ class CostosGastosLine(models.Model):
             domain['orden_compra_id'] = [('control_interno', '=', False)]
         return {'domain': domain}
 
-    @api.onchange('proveedor_text')
-    def _onchange_proveedor_text(self):
-        """Busca el proveedor_id cuando se escribe el nombre del proveedor"""
-        if self.proveedor_text and not self.proveedor_id:
-            # Buscar proveedor por nombre (case insensitive)
-            proveedor = self.env['res.partner'].search([
-                ('name', 'ilike', self.proveedor_text.strip())
-            ], limit=1)
-            if proveedor:
-                self.proveedor_id = proveedor
-
     @api.onchange('cuenta_id')
     def _onchange_numero_cuenta(self):
         if self.cuenta_id:
@@ -314,12 +303,12 @@ class CostosGastosLine(models.Model):
                 record.descripcion_cuenta = record.suggested_cuenta_selection.nombre_cuenta
                 record.cuenta_num = record.suggested_cuenta_selection.numero_cuenta
 
-    @api.depends('proveedor_id', 'concepto', 'proveedor_text')
+    @api.depends('proveedor_text', 'concepto', 'tipo_comprobante')
     def _compute_suggested_cuentas(self):
         """Calcula las cuentas contables sugeridas basadas en histórico"""
         for record in self:
-            # Verificar si hay al menos proveedor (id o text) o concepto
-            has_proveedor = record.proveedor_id or record.proveedor_text
+            # Verificar si hay al menos proveedor texto o concepto
+            has_proveedor = record.proveedor_text
             has_concepto = record.concepto
 
             if not has_proveedor and not has_concepto:
@@ -402,17 +391,21 @@ class CostosGastosLine(models.Model):
             score = 0
             match_reasons = []
 
-            # 1. Coincidencia de proveedor (peso: 5)
-            if self.proveedor_id and line.proveedor_id == self.proveedor_id:
-                score += 5
-                match_reasons.append('Mismo proveedor')
-            elif self.proveedor_text and line.proveedor_text:
-                # Comparar por texto si no hay proveedor_id
-                if self._normalize_text(self.proveedor_text) == self._normalize_text(line.proveedor_text):
+            # 1. Coincidencia de proveedor texto (peso: 6)
+            if self.proveedor_text and line.proveedor_text:
+                proveedor_actual = self._normalize_text(self.proveedor_text)
+                proveedor_historico = self._normalize_text(line.proveedor_text)
+
+                # Coincidencia exacta
+                if proveedor_actual == proveedor_historico:
+                    score += 6
+                    match_reasons.append('Mismo proveedor')
+                # Coincidencia parcial (una contiene a la otra)
+                elif proveedor_actual in proveedor_historico or proveedor_historico in proveedor_actual:
                     score += 4
                     match_reasons.append('Proveedor similar')
 
-            # 2. Similitud de concepto (peso: hasta 3)
+            # 2. Similitud de concepto (peso: hasta 5)
             if current_concepto and line.concepto:
                 line_concepto = self._normalize_text(line.concepto)
                 line_concepto_words = set(line_concepto.split())
@@ -420,28 +413,55 @@ class CostosGastosLine(models.Model):
                 if line_concepto_words and current_concepto_words:
                     common_words = current_concepto_words & line_concepto_words
                     similarity = len(common_words) / max(len(current_concepto_words), len(line_concepto_words))
-                    concepto_score = similarity * 3
+                    concepto_score = similarity * 5
                     score += concepto_score
                     if concepto_score > 1:
                         match_reasons.append(f'Concepto similar ({int(similarity * 100)}%)')
 
-            # 3. Penalización por antigüedad (mejor los más recientes)
+            # 3. Tipo de comprobante (peso: 3)
+            if self.tipo_comprobante and line.tipo_comprobante:
+                if self.tipo_comprobante == line.tipo_comprobante:
+                    score += 3
+                    match_reasons.append('Mismo tipo de comprobante')
+
+            # 4. Penalización por antigüedad (mejor los más recientes)
             if line.fecha_comprobante:
                 today = fields.Date.today()
                 days_ago = (today - line.fecha_comprobante).days
                 years_ago = days_ago / 365.0
-                age_penalty = years_ago * 0.5
+                age_penalty = years_ago * 0.3
                 score -= age_penalty
 
             cuenta_scores[cuenta_id]['score'] += score
             if match_reasons:
                 cuenta_scores[cuenta_id]['matches'].extend(match_reasons)
 
-        # 4. Frecuencia de uso (peso: hasta 2)
+        # 5. Frecuencia de uso (peso: hasta 3)
         for cuenta_id, data in cuenta_scores.items():
             usage_count = len([l for l in historical_lines if l.cuenta_id.id == cuenta_id])
-            frequency_score = min(usage_count / 10.0, 2.0)
+            frequency_score = min(usage_count / 10.0, 3.0)
             data['score'] += frequency_score
+
+            # 6. Bonus para gastos de administración (peso: 2)
+            cuenta = data['cuenta']
+            cuenta_nombre = self._normalize_text(cuenta.nombre_cuenta or '')
+            cuenta_numero = cuenta.numero_cuenta or ''
+
+            # Detectar si es cuenta de gastos de administración
+            es_gasto_admin = (
+                'administracion' in cuenta_nombre or
+                'gastos de administracion' in cuenta_nombre or
+                'admin' in cuenta_nombre or
+                # Detectar por número de cuenta (formato común: 600,001,000 o 6-00-001-000)
+                cuenta_numero.startswith('600,001') or
+                cuenta_numero.startswith('6-00-001') or
+                cuenta_numero.startswith('600001')
+            )
+
+            if es_gasto_admin:
+                data['score'] += 2
+                if 'Gastos de Administración' not in data['matches']:
+                    data['matches'].append('Gastos de Administración')
 
         # Ordenar por score descendente
         sorted_suggestions = sorted(
