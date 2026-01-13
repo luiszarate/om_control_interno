@@ -69,6 +69,14 @@ class CostosGastosLine(models.Model):
         compute='_compute_suggested_cuentas',
         store=False
     )
+    suggested_cuenta_selection = fields.Many2one(
+        'catalogo.cuentas',
+        string='💡 Sugerencia',
+        compute='_compute_suggested_cuenta_selection',
+        inverse='_inverse_suggested_cuenta_selection',
+        store=False,
+        help='Cuenta sugerida basada en histórico. Selecciona aquí para aplicarla rápidamente.'
+    )
     suggestion_info = fields.Html(
         string='Información de Sugerencias',
         compute='_compute_suggested_cuentas',
@@ -288,6 +296,23 @@ class CostosGastosLine(models.Model):
             cuenta = self.cuenta_id
             self.descripcion_cuenta = cuenta.nombre_cuenta
             self.cuenta_num = cuenta.numero_cuenta
+
+    @api.depends('suggested_cuenta_ids')
+    def _compute_suggested_cuenta_selection(self):
+        """Devuelve la primera sugerencia para mostrar en tree"""
+        for record in self:
+            if record.suggested_cuenta_ids:
+                record.suggested_cuenta_selection = record.suggested_cuenta_ids[0]
+            else:
+                record.suggested_cuenta_selection = False
+
+    def _inverse_suggested_cuenta_selection(self):
+        """Cuando seleccionan una sugerencia, aplicarla al campo cuenta_id"""
+        for record in self:
+            if record.suggested_cuenta_selection:
+                record.cuenta_id = record.suggested_cuenta_selection
+                record.descripcion_cuenta = record.suggested_cuenta_selection.nombre_cuenta
+                record.cuenta_num = record.suggested_cuenta_selection.numero_cuenta
 
     @api.depends('proveedor_id', 'concepto', 'proveedor_text')
     def _compute_suggested_cuentas(self):

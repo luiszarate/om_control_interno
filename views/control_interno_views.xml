@@ -18,6 +18,7 @@
                 <field name="fecha_comprobante" optional="show" widget="date_anchor_control_month"/>
                 <field name="concepto" optional="show"/>
                 <field name="proveedor_text" optional="show"/>
+                <field name="proveedor_id" invisible="1"/>
                 <field name="tax_id" optional="show"/>
                 <field name="country_id" optional="show"/>
                 <field name="importe" optional="show"/>
@@ -38,6 +39,10 @@
                 <field name="total_subcuenta_sin_iva"  optional="hide"/>
                 <field name="descripcion_cuenta" optional="show"/>
                 <field name="cuenta_num" invisible="1"/>
+                <field name="suggested_cuenta_ids" invisible="1"/>
+                <field name="suggested_cuenta_selection" optional="show"
+                       domain="[('id', 'in', suggested_cuenta_ids)]"
+                       attrs="{'invisible': [('suggested_cuenta_ids', '=', [])]}"/>
                 <field name="cuenta_id" optional="show"/>
                 <field name="comentarios_imago" optional="show"/>
                 <field name="comentarios_contador" optional="hide"/>
