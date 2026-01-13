@@ -65,7 +65,7 @@
                         <field name="fecha_comprobante" widget="date_anchor_control_month"/>
                         <field name="concepto"/>
                         <field name="proveedor_text"/>
-                        <field name="proveedor_id" hidden="true"/>
+                        <field name="proveedor_id" invisible="1"/>
                         <field name="tax_id"/>
                         <field name="country_id"/>
                     </group>

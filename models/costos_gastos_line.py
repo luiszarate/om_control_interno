@@ -271,6 +271,17 @@ class CostosGastosLine(models.Model):
             domain['orden_compra_id'] = [('control_interno', '=', False)]
         return {'domain': domain}
 
+    @api.onchange('proveedor_text')
+    def _onchange_proveedor_text(self):
+        """Busca el proveedor_id cuando se escribe el nombre del proveedor"""
+        if self.proveedor_text and not self.proveedor_id:
+            # Buscar proveedor por nombre (case insensitive)
+            proveedor = self.env['res.partner'].search([
+                ('name', 'ilike', self.proveedor_text.strip())
+            ], limit=1)
+            if proveedor:
+                self.proveedor_id = proveedor
+
     @api.onchange('cuenta_id')
     def _onchange_numero_cuenta(self):
         if self.cuenta_id:
@@ -282,7 +293,11 @@ class CostosGastosLine(models.Model):
     def _compute_suggested_cuentas(self):
         """Calcula las cuentas contables sugeridas basadas en histórico"""
         for record in self:
-            if not record.proveedor_id and not record.concepto:
+            # Verificar si hay al menos proveedor (id o text) o concepto
+            has_proveedor = record.proveedor_id or record.proveedor_text
+            has_concepto = record.concepto
+
+            if not has_proveedor and not has_concepto:
                 record.suggested_cuenta_ids = [(5, 0, 0)]
                 record.suggestion_info = ''
                 continue
@@ -295,7 +310,7 @@ class CostosGastosLine(models.Model):
                 record.suggested_cuenta_ids = [(6, 0, cuenta_ids)]
 
                 # Generar HTML con la información de sugerencias
-                html = '<div style="font-size: 13px; line-height: 1.6;">'
+                html = '<div style="font-size: 13px; line-height: 1.6; margin-bottom: 10px;">'
                 for idx, sug in enumerate(top_suggestions, 1):
                     confidence = int(sug['confidence'])
                     # Colores: verde >= 70%, amarillo >= 40%, rojo < 40%
@@ -309,15 +324,19 @@ class CostosGastosLine(models.Model):
                         color = '#dc3545'
                         emoji = '🟠'
 
-                    html += f'<div style="margin: 5px 0; padding: 5px; background: #f8f9fa; border-left: 3px solid {color};">'
-                    html += f'  <strong>{idx}.</strong> [{sug["cuenta_num"]}] {sug["cuenta_name"]}'
+                    html += f'<div style="margin: 5px 0; padding: 8px; background: #f8f9fa; border-left: 3px solid {color}; border-radius: 3px;">'
+                    html += f'  <strong>{idx}.</strong> <strong>[{sug["cuenta_num"]}]</strong> {sug["cuenta_name"]}'
                     html += f'  <span style="color: {color}; font-weight: bold; margin-left: 8px;">{emoji} {confidence}%</span>'
                     html += '</div>'
                 html += '</div>'
                 record.suggestion_info = html
             else:
                 record.suggested_cuenta_ids = [(5, 0, 0)]
-                record.suggestion_info = ''
+                # Mostrar mensaje cuando no hay sugerencias pero sí hay datos
+                if has_proveedor or has_concepto:
+                    record.suggestion_info = '<div style="font-size: 12px; color: #6c757d; padding: 8px; background: #f8f9fa; border-radius: 3px;">ℹ️ No hay sugerencias disponibles. Necesitas más registros históricos con cuentas asignadas.</div>'
+                else:
+                    record.suggestion_info = ''
 
     def _calculate_account_suggestions(self):
         """
