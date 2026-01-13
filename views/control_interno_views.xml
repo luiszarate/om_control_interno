@@ -89,9 +89,23 @@
                         <field name="descuento_subcuenta"/>
                         <field name="total_subcuenta_sin_iva"/>
                     </group>
-                    <group>
+                    <group string="Cuenta Contable">
                         <field name="descripcion_cuenta"/>
                         <field name="cuenta_id"/>
+                        <field name="suggested_cuenta_ids" invisible="1"/>
+                        <label for="suggestion_info" string="💡 Sugerencias de Cuentas"
+                               attrs="{'invisible': [('suggestion_info', '=', False)]}"/>
+                        <div attrs="{'invisible': [('suggestion_info', '=', False)]}">
+                            <field name="suggestion_info" widget="html" nolabel="1"/>
+                            <div class="o_row" style="margin-top: 8px;">
+                                <button name="action_apply_suggestion_1" type="object" string="Aplicar 1ra" class="btn-sm btn-success"
+                                        attrs="{'invisible': ['|', ('suggested_cuenta_ids', '=', []), ('cuenta_id', '!=', False)]}"/>
+                                <button name="action_apply_suggestion_2" type="object" string="Aplicar 2da" class="btn-sm btn-warning"
+                                        attrs="{'invisible': [('suggested_cuenta_ids', '=', [])]}"/>
+                                <button name="action_apply_suggestion_3" type="object" string="Aplicar 3ra" class="btn-sm btn-info"
+                                        attrs="{'invisible': [('suggested_cuenta_ids', '=', [])]}"/>
+                            </div>
+                        </div>
                         <field name="comentarios_imago"/>
                         <field name="comentarios_contador"/>
                     </group>
