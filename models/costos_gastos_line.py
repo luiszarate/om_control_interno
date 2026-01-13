@@ -63,8 +63,8 @@ class CostosGastosLine(models.Model):
     suggested_cuenta_ids = fields.Many2many(
         'catalogo.cuentas',
         'costos_gastos_suggested_cuenta_rel',
-        'line_id',
-        'cuenta_id',
+        'costos_gastos_line_id',
+        'catalogo_cuenta_id',
         string='Cuentas Sugeridas',
         compute='_compute_suggested_cuentas',
         store=False
@@ -317,7 +317,7 @@ class CostosGastosLine(models.Model):
                 record.suggestion_info = html
             else:
                 record.suggested_cuenta_ids = [(5, 0, 0)]
-                record.suggestion_info = '<div style="font-size: 12px; color: #999;">No hay sugerencias disponibles</div>'
+                record.suggestion_info = ''
 
     def _calculate_account_suggestions(self):
         """
@@ -383,7 +383,6 @@ class CostosGastosLine(models.Model):
 
             # 3. Penalización por antigüedad (mejor los más recientes)
             if line.fecha_comprobante:
-                from datetime import datetime
                 today = fields.Date.today()
                 days_ago = (today - line.fecha_comprobante).days
                 years_ago = days_ago / 365.0
