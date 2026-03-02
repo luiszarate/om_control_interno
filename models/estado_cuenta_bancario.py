@@ -176,23 +176,16 @@ class EstadoCuentaBancarioLine(models.Model):
             rec.costos_gastos_count = len(rec.costos_gastos_line_ids)
 
     def action_open_conciliacion(self):
-        """Open the bank movement form to manage conciliation."""
+        """Open the conciliation wizard for this bank movement."""
         self.ensure_one()
+        monto = self.retiro if self.retiro > 0 else self.deposito
         return {
             'name': 'Conciliar Movimiento',
             'type': 'ir.actions.act_window',
-            'res_model': 'estado.cuenta.bancario.line',
-            'res_id': self.id,
+            'res_model': 'conciliacion.manual.wizard',
             'view_mode': 'form',
-            'view_id': self.env.ref(
-                'om_control_interno.view_estado_cuenta_bancario_line_form'
-            ).id,
             'target': 'new',
             'context': {
-                'form_view_initial_mode': 'edit',
+                'default_movimiento_id': self.id,
             },
         }
-
-    def action_save_conciliacion(self):
-        """Save conciliation changes and close the dialog."""
-        return {'type': 'ir.actions.act_window_close'}
