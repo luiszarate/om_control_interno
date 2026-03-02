@@ -184,5 +184,12 @@ class EstadoCuentaBancarioLine(models.Model):
             'res_model': 'estado.cuenta.bancario.line',
             'res_id': self.id,
             'view_mode': 'form',
+            'view_id': self.env.ref(
+                'om_control_interno.view_estado_cuenta_bancario_line_form'
+            ).id,
             'target': 'new',
         }
+
+    def action_save_conciliacion(self):
+        """Save conciliation changes and close the dialog."""
+        return {'type': 'ir.actions.act_window_close'}
