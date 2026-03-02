@@ -119,13 +119,13 @@
                     <group>
                         <group string="Datos del Movimiento">
                             <field name="estado_cuenta_id" readonly="1"/>
-                            <field name="fecha" readonly="1"/>
-                            <field name="descripcion" readonly="1"/>
+                            <field name="fecha"/>
+                            <field name="descripcion"/>
                         </group>
                         <group string="Montos">
-                            <field name="retiro" readonly="1"/>
-                            <field name="deposito" readonly="1"/>
-                            <field name="saldo" readonly="1"/>
+                            <field name="retiro"/>
+                            <field name="deposito"/>
+                            <field name="saldo"/>
                         </group>
                     </group>
                     <group>
@@ -147,8 +147,74 @@
                         </tree>
                     </field>
                 </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ==================== -->
+    <!-- Conciliación Manual Wizard -->
+    <!-- ==================== -->
+
+    <record id="view_conciliacion_manual_wizard_form" model="ir.ui.view">
+        <field name="name">conciliacion.manual.wizard.form</field>
+        <field name="model">conciliacion.manual.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Conciliar Movimiento">
+                <sheet>
+                    <div class="oe_title">
+                        <h3>
+                            <field name="conciliado" invisible="1"/>
+                            <span attrs="{'invisible': [('conciliado', '=', False)]}">
+                                <span style="color: #28a745;">✓ Conciliado</span>
+                            </span>
+                            <span attrs="{'invisible': [('conciliado', '=', True)]}">
+                                <span style="color: #dc3545;">✗ Pendiente</span>
+                            </span>
+                        </h3>
+                    </div>
+                    <group>
+                        <group string="Datos del Movimiento">
+                            <field name="movimiento_id" invisible="1"/>
+                            <field name="estado_cuenta_id"/>
+                            <field name="fecha"/>
+                            <field name="descripcion"/>
+                        </group>
+                        <group string="Montos">
+                            <field name="retiro"/>
+                            <field name="deposito"/>
+                            <field name="saldo"/>
+                        </group>
+                    </group>
+                    <separator string="Filtros de Búsqueda"/>
+                    <group col="5">
+                        <field name="filtro_fecha_inicio"/>
+                        <field name="filtro_fecha_fin"/>
+                        <field name="filtro_monto_min"/>
+                        <field name="filtro_monto_max"/>
+                        <button name="action_limpiar_filtros" type="object"
+                                string="Limpiar Filtros" class="btn-link"
+                                icon="fa-times"/>
+                    </group>
+                    <separator string="Líneas de Control Interno"/>
+                    <field name="costos_gastos_line_ids" widget="many2many_tags"
+                           domain="[('fecha_pago', '&gt;=', filtro_fecha_inicio),
+                                    ('fecha_pago', '&lt;=', filtro_fecha_fin),
+                                    ('total', '&gt;=', filtro_monto_min),
+                                    ('total', '&lt;=', filtro_monto_max)]"
+                           options="{'no_create': True}"/>
+                    <field name="costos_gastos_line_ids" mode="tree" readonly="1">
+                        <tree>
+                            <field name="control_interno_id"/>
+                            <field name="fecha_pago"/>
+                            <field name="concepto"/>
+                            <field name="proveedor_text"/>
+                            <field name="total"/>
+                            <field name="tipo_pago"/>
+                        </tree>
+                    </field>
+                </sheet>
                 <footer>
-                    <button name="action_save_conciliacion" type="object"
+                    <button name="action_confirmar" type="object"
                             string="Guardar y Cerrar" class="btn-primary"/>
                     <button string="Descartar" class="btn-secondary" special="cancel"/>
                 </footer>
