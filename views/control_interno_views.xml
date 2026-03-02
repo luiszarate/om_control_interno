@@ -40,9 +40,7 @@
                 <field name="descripcion_cuenta" optional="show"/>
                 <field name="cuenta_num" invisible="1"/>
                 <field name="suggested_cuenta_ids" invisible="1"/>
-                <field name="suggested_cuenta_selection" optional="show"
-                       domain="[('id', 'in', suggested_cuenta_ids)]"
-                       attrs="{'invisible': [('suggested_cuenta_ids', '=', [])]}"/>
+                <field name="suggested_cuenta_selection" invisible="1"/>
                 <field name="cuenta_id" optional="show"/>
                 <field name="comentarios_imago" optional="show"/>
                 <field name="comentarios_contador" optional="hide"/>
@@ -97,26 +95,9 @@
                     <group string="Cuenta Contable">
                         <field name="descripcion_cuenta"/>
                         <field name="cuenta_id"/>
+                        <!-- Sugerencias de cuentas deshabilitadas temporalmente -->
                         <field name="suggested_cuenta_ids" invisible="1"/>
-                        <label for="suggestion_info" string="💡 Sugerencias de Cuentas"
-                               attrs="{'invisible': [('suggestion_info', '=', '')]}"/>
-                        <div attrs="{'invisible': [('suggestion_info', '=', '')]}">
-                            <field name="suggestion_info" widget="html" nolabel="1"/>
-                            <div style="margin-top: 8px;">
-                                <button name="action_apply_suggestion_1" type="object"
-                                        string="✓ Aplicar 1ra"
-                                        class="btn btn-sm btn-success"
-                                        attrs="{'invisible': [('suggested_cuenta_ids', '=', [])]}"/>
-                                <button name="action_apply_suggestion_2" type="object"
-                                        string="✓ Aplicar 2da"
-                                        class="btn btn-sm btn-warning"
-                                        attrs="{'invisible': [('suggested_cuenta_ids', '=', [])]}"/>
-                                <button name="action_apply_suggestion_3" type="object"
-                                        string="✓ Aplicar 3ra"
-                                        class="btn btn-sm btn-info"
-                                        attrs="{'invisible': [('suggested_cuenta_ids', '=', [])]}"/>
-                            </div>
-                        </div>
+                        <field name="suggestion_info" invisible="1"/>
                         <field name="comentarios_imago"/>
                         <field name="comentarios_contador"/>
                     </group>
