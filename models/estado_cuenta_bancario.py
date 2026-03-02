@@ -188,6 +188,9 @@ class EstadoCuentaBancarioLine(models.Model):
                 'om_control_interno.view_estado_cuenta_bancario_line_form'
             ).id,
             'target': 'new',
+            'context': {
+                'form_view_initial_mode': 'edit',
+            },
         }
 
     def action_save_conciliacion(self):

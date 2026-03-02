@@ -107,7 +107,7 @@
         <field name="name">estado.cuenta.bancario.line.form</field>
         <field name="model">estado.cuenta.bancario.line</field>
         <field name="arch" type="xml">
-            <form string="Movimiento Bancario" style="min-width: 900px;">
+            <form string="Movimiento Bancario">
                 <sheet>
                     <div class="oe_title">
                         <h3>
