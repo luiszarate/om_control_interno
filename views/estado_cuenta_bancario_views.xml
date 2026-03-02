@@ -185,22 +185,8 @@
                             <field name="saldo"/>
                         </group>
                     </group>
-                    <separator string="Filtros de Búsqueda (aplican al agregar líneas)"/>
-                    <group col="5">
-                        <field name="filtro_fecha_inicio"/>
-                        <field name="filtro_fecha_fin"/>
-                        <field name="filtro_monto_min"/>
-                        <field name="filtro_monto_max"/>
-                        <button name="action_limpiar_filtros" type="object"
-                                string="Limpiar Filtros" class="btn-link"
-                                icon="fa-times"/>
-                    </group>
                     <separator string="Líneas de Control Interno"/>
-                    <field name="costos_gastos_line_ids"
-                           domain="[('fecha_pago', '&gt;=', filtro_fecha_inicio),
-                                    ('fecha_pago', '&lt;=', filtro_fecha_fin),
-                                    ('total', '&gt;=', filtro_monto_min),
-                                    ('total', '&lt;=', filtro_monto_max)]">
+                    <field name="costos_gastos_line_ids">
                         <tree>
                             <field name="control_interno_id"/>
                             <field name="fecha_pago"/>

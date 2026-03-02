@@ -1,8 +1,4 @@
 from odoo import models, fields, api
-from datetime import timedelta
-import logging
-
-_logger = logging.getLogger(__name__)
 
 
 class ConciliacionManualWizard(models.TransientModel):
@@ -36,12 +32,6 @@ class ConciliacionManualWizard(models.TransientModel):
     saldo = fields.Float(related='movimiento_id.saldo', readonly=True)
     conciliado = fields.Boolean(compute='_compute_conciliado')
 
-    # Filter fields
-    filtro_fecha_inicio = fields.Date(string='Desde')
-    filtro_fecha_fin = fields.Date(string='Hasta')
-    filtro_monto_min = fields.Float(string='Monto Mín', digits=(16, 2))
-    filtro_monto_max = fields.Float(string='Monto Máx', digits=(16, 2))
-
     @api.depends('costos_gastos_line_ids')
     def _compute_conciliado(self):
         for rec in self:
@@ -56,34 +46,6 @@ class ConciliacionManualWizard(models.TransientModel):
             res['costos_gastos_line_ids'] = [
                 (6, 0, mov.costos_gastos_line_ids.ids)
             ]
-
-            # Month filter based on bank statement month
-            if mov.mes_estado_cuenta:
-                mes = mov.mes_estado_cuenta
-                res['filtro_fecha_inicio'] = mes.replace(day=1)
-                if mes.month == 12:
-                    next_month = mes.replace(
-                        year=mes.year + 1, month=1, day=1,
-                    )
-                else:
-                    next_month = mes.replace(month=mes.month + 1, day=1)
-                res['filtro_fecha_fin'] = next_month - timedelta(days=1)
-            else:
-                res['filtro_fecha_inicio'] = fields.Date.from_string(
-                    '2000-01-01'
-                )
-                res['filtro_fecha_fin'] = fields.Date.from_string(
-                    '2099-12-31'
-                )
-
-            # Amount filter (±10 pesos)
-            monto = mov.retiro if mov.retiro > 0 else mov.deposito
-            if monto:
-                res['filtro_monto_min'] = max(0, monto - 10.0)
-                res['filtro_monto_max'] = monto + 10.0
-            else:
-                res['filtro_monto_min'] = 0
-                res['filtro_monto_max'] = 99999999.0
         return res
 
     @api.model
@@ -113,24 +75,5 @@ class ConciliacionManualWizard(models.TransientModel):
     def action_confirmar(self):
         """Ensure save and close the dialog."""
         self.ensure_one()
-        # Belt-and-suspenders: sync one more time in case create/write
-        # was called without costos_gastos_line_ids in vals.
         self._sync_to_movimiento()
         return {'type': 'ir.actions.act_window_close'}
-
-    def action_limpiar_filtros(self):
-        """Reset filters to show all lines."""
-        self.write({
-            'filtro_fecha_inicio': fields.Date.from_string('2000-01-01'),
-            'filtro_fecha_fin': fields.Date.from_string('2099-12-31'),
-            'filtro_monto_min': 0,
-            'filtro_monto_max': 99999999.0,
-        })
-        return {
-            'name': 'Conciliar Movimiento',
-            'type': 'ir.actions.act_window',
-            'res_model': self._name,
-            'res_id': self.id,
-            'view_mode': 'form',
-            'target': 'new',
-        }

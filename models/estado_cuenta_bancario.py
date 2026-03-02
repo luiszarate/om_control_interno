@@ -2,6 +2,7 @@
 
 from odoo import models, fields, api
 from odoo.exceptions import UserError
+from datetime import timedelta
 
 
 class EstadoCuentaBancario(models.Model):
@@ -179,13 +180,32 @@ class EstadoCuentaBancarioLine(models.Model):
         """Open the conciliation wizard for this bank movement."""
         self.ensure_one()
         monto = self.retiro if self.retiro > 0 else self.deposito
+        ctx = {
+            'default_movimiento_id': self.id,
+            # Pre-activate search filters in the "Add" popup
+            'search_default_filter_mes_conciliacion': 1,
+            'search_default_filter_monto_conciliacion': 1,
+        }
+        # Month range for the search filter
+        mes = self.mes_estado_cuenta
+        if mes:
+            ctx['conciliacion_fecha_inicio'] = mes.replace(day=1).isoformat()
+            if mes.month == 12:
+                next_month = mes.replace(year=mes.year + 1, month=1, day=1)
+            else:
+                next_month = mes.replace(month=mes.month + 1, day=1)
+            ctx['conciliacion_fecha_fin'] = (
+                next_month - timedelta(days=1)
+            ).isoformat()
+        # Amount range (±10 pesos) for the search filter
+        if monto:
+            ctx['conciliacion_monto_min'] = max(0, monto - 10.0)
+            ctx['conciliacion_monto_max'] = monto + 10.0
         return {
             'name': 'Conciliar Movimiento',
             'type': 'ir.actions.act_window',
             'res_model': 'conciliacion.manual.wizard',
             'view_mode': 'form',
             'target': 'new',
-            'context': {
-                'default_movimiento_id': self.id,
-            },
+            'context': ctx,
         }
