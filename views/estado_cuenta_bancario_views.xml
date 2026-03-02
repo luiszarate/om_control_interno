@@ -107,7 +107,7 @@
         <field name="name">estado.cuenta.bancario.line.form</field>
         <field name="model">estado.cuenta.bancario.line</field>
         <field name="arch" type="xml">
-            <form string="Movimiento Bancario">
+            <form string="Movimiento Bancario" style="min-width: 900px;">
                 <sheet>
                     <div class="oe_title">
                         <h3>
@@ -119,13 +119,13 @@
                     <group>
                         <group string="Datos del Movimiento">
                             <field name="estado_cuenta_id" readonly="1"/>
-                            <field name="fecha"/>
-                            <field name="descripcion"/>
+                            <field name="fecha" readonly="1"/>
+                            <field name="descripcion" readonly="1"/>
                         </group>
                         <group string="Montos">
-                            <field name="retiro"/>
-                            <field name="deposito"/>
-                            <field name="saldo"/>
+                            <field name="retiro" readonly="1"/>
+                            <field name="deposito" readonly="1"/>
+                            <field name="saldo" readonly="1"/>
                         </group>
                     </group>
                     <group>
@@ -147,6 +147,11 @@
                         </tree>
                     </field>
                 </sheet>
+                <footer>
+                    <button name="action_save_conciliacion" type="object"
+                            string="Guardar y Cerrar" class="btn-primary"/>
+                    <button string="Descartar" class="btn-secondary" special="cancel"/>
+                </footer>
             </form>
         </field>
     </record>
