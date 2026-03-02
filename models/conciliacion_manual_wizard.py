@@ -1,5 +1,8 @@
 from odoo import models, fields, api
 from datetime import timedelta
+import logging
+
+_logger = logging.getLogger(__name__)
 
 
 class ConciliacionManualWizard(models.TransientModel):
@@ -83,12 +86,36 @@ class ConciliacionManualWizard(models.TransientModel):
                 res['filtro_monto_max'] = 99999999.0
         return res
 
+    @api.model
+    def create(self, vals):
+        """Override create to immediately propagate M2M to bank movement."""
+        record = super().create(vals)
+        record._sync_to_movimiento()
+        return record
+
+    def write(self, vals):
+        """Override write to immediately propagate M2M to bank movement."""
+        result = super().write(vals)
+        if 'costos_gastos_line_ids' in vals:
+            self._sync_to_movimiento()
+        return result
+
+    def _sync_to_movimiento(self):
+        """Write the wizard M2M values to the real bank movement."""
+        for rec in self:
+            if rec.movimiento_id:
+                rec.movimiento_id.sudo().write({
+                    'costos_gastos_line_ids': [
+                        (6, 0, rec.costos_gastos_line_ids.ids)
+                    ],
+                })
+
     def action_confirmar(self):
-        """Write the M2M links to the real bank movement and close."""
+        """Ensure save and close the dialog."""
         self.ensure_one()
-        self.movimiento_id.costos_gastos_line_ids = [
-            (6, 0, self.costos_gastos_line_ids.ids)
-        ]
+        # Belt-and-suspenders: sync one more time in case create/write
+        # was called without costos_gastos_line_ids in vals.
+        self._sync_to_movimiento()
         return {'type': 'ir.actions.act_window_close'}
 
     def action_limpiar_filtros(self):

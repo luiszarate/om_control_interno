@@ -185,7 +185,7 @@
                             <field name="saldo"/>
                         </group>
                     </group>
-                    <separator string="Filtros de Búsqueda"/>
+                    <separator string="Filtros de Búsqueda (aplican al agregar líneas)"/>
                     <group col="5">
                         <field name="filtro_fecha_inicio"/>
                         <field name="filtro_fecha_fin"/>
@@ -196,13 +196,11 @@
                                 icon="fa-times"/>
                     </group>
                     <separator string="Líneas de Control Interno"/>
-                    <field name="costos_gastos_line_ids" widget="many2many_tags"
+                    <field name="costos_gastos_line_ids"
                            domain="[('fecha_pago', '&gt;=', filtro_fecha_inicio),
                                     ('fecha_pago', '&lt;=', filtro_fecha_fin),
                                     ('total', '&gt;=', filtro_monto_min),
-                                    ('total', '&lt;=', filtro_monto_max)]"
-                           options="{'no_create': True}"/>
-                    <field name="costos_gastos_line_ids" mode="tree" readonly="1">
+                                    ('total', '&lt;=', filtro_monto_max)]">
                         <tree>
                             <field name="control_interno_id"/>
                             <field name="fecha_pago"/>
