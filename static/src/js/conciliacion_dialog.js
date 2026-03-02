@@ -24,7 +24,7 @@ odoo.define('om_control_interno.conciliacion_dialog', function (require) {
             var interval = setInterval(function () {
                 checks++;
                 var form = modal.querySelector(
-                    '.o_field_widget[name="filtro_fecha_inicio"]'
+                    '.o_field_widget[name="movimiento_id"]'
                 );
                 if (form) {
                     var dialog = modal.querySelector('.modal-dialog');
@@ -48,6 +48,6 @@ odoo.define('om_control_interno.conciliacion_dialog', function (require) {
 
     // Start observing once the DOM is ready
     $(function () {
-        observer.observe(document.body, {childNodes: true, subtree: true});
+        observer.observe(document.body, {childList: true, subtree: true});
     });
 });

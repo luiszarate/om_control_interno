@@ -186,7 +186,17 @@
                         </group>
                     </group>
                     <separator string="Líneas de Control Interno"/>
-                    <field name="costos_gastos_line_ids">
+                    <field name="filtro_fecha_inicio" invisible="1"/>
+                    <field name="filtro_fecha_fin" invisible="1"/>
+                    <field name="filtro_monto_min" invisible="1"/>
+                    <field name="filtro_monto_max" invisible="1"/>
+                    <field name="costos_gastos_line_ids"
+                           context="{'search_default_filter_mes_conciliacion': 1,
+                                     'search_default_filter_monto_conciliacion': 1,
+                                     'conciliacion_fecha_inicio': filtro_fecha_inicio,
+                                     'conciliacion_fecha_fin': filtro_fecha_fin,
+                                     'conciliacion_monto_min': filtro_monto_min,
+                                     'conciliacion_monto_max': filtro_monto_max}">
                         <tree>
                             <field name="control_interno_id"/>
                             <field name="fecha_pago"/>
