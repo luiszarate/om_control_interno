@@ -14,6 +14,8 @@
                 <field name="numero_cuenta"/>
                 <field name="mes"/>
                 <field name="movimiento_count"/>
+                <field name="conciliados_count"/>
+                <field name="pendientes_count"/>
             </tree>
         </field>
     </record>
@@ -25,6 +27,11 @@
         <field name="arch" type="xml">
             <form string="Estado de Cuenta Bancario">
                 <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button class="oe_stat_button" icon="fa-check-circle"
+                                name="action_auto_conciliar" type="object"
+                                string="Conciliar Automáticamente"/>
+                    </div>
                     <group>
                         <group>
                             <field name="numero_cuenta"/>
@@ -33,16 +40,29 @@
                             <field name="mes"/>
                         </group>
                     </group>
+                    <group>
+                        <group>
+                            <field name="conciliados_count"/>
+                        </group>
+                        <group>
+                            <field name="pendientes_count"/>
+                        </group>
+                    </group>
                     <notebook>
                         <page string="Movimientos" name="movimientos">
                             <field name="movimiento_ids">
-                                <tree editable="bottom">
+                                <tree editable="bottom" decoration-success="conciliado == True" decoration-muted="conciliado == False">
+                                    <field name="conciliado" invisible="1"/>
                                     <field name="fecha"/>
                                     <field name="descripcion"/>
                                     <field name="retiro"/>
                                     <field name="deposito"/>
                                     <field name="saldo"/>
                                     <field name="observaciones"/>
+                                    <field name="costos_gastos_count" string="# CI"/>
+                                    <button name="action_open_conciliacion" type="object"
+                                            string="Conciliar" icon="fa-link"
+                                            class="oe_highlight"/>
                                 </tree>
                             </field>
                         </page>
@@ -80,6 +100,58 @@
     </record>
 
     <!-- ==================== -->
+    <!-- Movimiento Bancario (Form for conciliation) -->
+    <!-- ==================== -->
+
+    <record id="view_estado_cuenta_bancario_line_form" model="ir.ui.view">
+        <field name="name">estado.cuenta.bancario.line.form</field>
+        <field name="model">estado.cuenta.bancario.line</field>
+        <field name="arch" type="xml">
+            <form string="Movimiento Bancario">
+                <sheet>
+                    <div class="oe_title">
+                        <h3>
+                            <field name="conciliado" widget="boolean" invisible="1"/>
+                            <span attrs="{'invisible': [('conciliado', '=', False)]}">✓ Conciliado</span>
+                            <span attrs="{'invisible': [('conciliado', '=', True)]}" style="color: #dc3545;">✗ Pendiente</span>
+                        </h3>
+                    </div>
+                    <group>
+                        <group string="Datos del Movimiento">
+                            <field name="estado_cuenta_id" readonly="1"/>
+                            <field name="fecha"/>
+                            <field name="descripcion"/>
+                        </group>
+                        <group string="Montos">
+                            <field name="retiro"/>
+                            <field name="deposito"/>
+                            <field name="saldo"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="observaciones"/>
+                    </group>
+                    <separator string="Líneas de Control Interno Relacionadas"/>
+                    <field name="mes_estado_cuenta" invisible="1"/>
+                    <field name="costos_gastos_line_ids" widget="many2many_tags"
+                           context="{'default_fecha_pago': fecha}"
+                           domain="[]"/>
+                    <field name="costos_gastos_line_ids" mode="tree" readonly="1">
+                        <tree>
+                            <field name="control_interno_id"/>
+                            <field name="fecha_pago"/>
+                            <field name="concepto"/>
+                            <field name="proveedor_text"/>
+                            <field name="total"/>
+                            <field name="tipo_pago"/>
+                        </tree>
+                    </field>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ==================== -->
     <!-- Movimientos (standalone) -->
     <!-- ==================== -->
 
@@ -88,7 +160,7 @@
         <field name="name">estado.cuenta.bancario.line.tree</field>
         <field name="model">estado.cuenta.bancario.line</field>
         <field name="arch" type="xml">
-            <tree>
+            <tree decoration-success="conciliado == True">
                 <field name="estado_cuenta_id"/>
                 <field name="fecha"/>
                 <field name="descripcion"/>
@@ -96,6 +168,8 @@
                 <field name="deposito"/>
                 <field name="saldo"/>
                 <field name="observaciones"/>
+                <field name="conciliado"/>
+                <field name="costos_gastos_count" string="# CI"/>
             </tree>
         </field>
     </record>
@@ -109,9 +183,13 @@
                 <field name="estado_cuenta_id"/>
                 <field name="fecha"/>
                 <field name="descripcion"/>
+                <filter string="Conciliados" name="filter_conciliados" domain="[('conciliado', '=', True)]"/>
+                <filter string="Pendientes" name="filter_pendientes" domain="[('conciliado', '=', False)]"/>
+                <separator/>
                 <group expand="0" string="Agrupar por">
                     <filter string="Estado de Cuenta" name="group_estado" context="{'group_by': 'estado_cuenta_id'}"/>
                     <filter string="Fecha" name="group_fecha" context="{'group_by': 'fecha:month'}"/>
+                    <filter string="Conciliado" name="group_conciliado" context="{'group_by': 'conciliado'}"/>
                 </group>
             </search>
         </field>
@@ -121,7 +199,7 @@
     <record id="action_estado_cuenta_bancario_line" model="ir.actions.act_window">
         <field name="name">Movimientos Bancarios</field>
         <field name="res_model">estado.cuenta.bancario.line</field>
-        <field name="view_mode">tree</field>
+        <field name="view_mode">tree,form</field>
         <field name="search_view_id" ref="view_estado_cuenta_bancario_line_search"/>
     </record>
 

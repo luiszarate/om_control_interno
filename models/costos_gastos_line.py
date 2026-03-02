@@ -8,6 +8,19 @@ class CostosGastosLine(models.Model):
     _name = 'costos.gastos.line'
     _description = 'Línea de Costos y Gastos'
 
+    def name_get(self):
+        result = []
+        for rec in self:
+            parts = []
+            if rec.fecha_pago:
+                parts.append(str(rec.fecha_pago))
+            if rec.proveedor_text:
+                parts.append(rec.proveedor_text[:30])
+            if rec.total:
+                parts.append(f"${rec.total:,.2f}")
+            result.append((rec.id, ' - '.join(parts) if parts else f"Línea #{rec.id}"))
+        return result
+
     control_interno_id = fields.Many2one('control.interno.mensual', string='Control Interno')
     factura_xml_id = fields.Many2one('factura.xml', string='Factura XML')  # Nueva relación
     orden_compra_id = fields.Many2one('purchase.order', string='Orden de Compra')
@@ -81,6 +94,14 @@ class CostosGastosLine(models.Model):
         string='Información de Sugerencias',
         compute='_compute_suggested_cuentas',
         store=False
+    )
+
+    movimiento_bancario_ids = fields.Many2many(
+        'estado.cuenta.bancario.line',
+        'estado_cuenta_costos_gastos_rel',
+        'costos_gastos_line_id',
+        'estado_cuenta_line_id',
+        string='Movimientos Bancarios',
     )
 
     comentarios_imago = fields.Text(string='Comentarios Imago Aerospace')
