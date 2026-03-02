@@ -13,6 +13,7 @@
     <menuitem id="menu_ver_catalogo_cuentas" name="Ver Catálogo de Cuentas" parent="menu_catalogo_cuentas" action="action_catalogo_cuentas"/>
     <menuitem id="menu_import_catalogo_cuentas" name="Importar Catálogo de Cuentas" parent="menu_catalogo_cuentas" action="action_catalogo_cuentas_import_wizard"/>
 
-    
-    <!-- Move the child menu item here -->
+    <menuitem id="menu_estados_cuenta" name="Estados de Cuenta Bancarios" parent="menu_control_interno"/>
+    <menuitem id="menu_ver_estados_cuenta" name="Ver Estados de Cuenta" parent="menu_estados_cuenta" action="action_estado_cuenta_bancario"/>
+    <menuitem id="menu_ver_movimientos_bancarios" name="Ver Movimientos" parent="menu_estados_cuenta" action="action_estado_cuenta_bancario_line"/>
 </odoo>
