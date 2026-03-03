@@ -32,11 +32,9 @@ class ConciliacionManualWizard(models.TransientModel):
     saldo = fields.Float(related='movimiento_id.saldo', readonly=True)
     conciliado = fields.Boolean(compute='_compute_conciliado')
 
-    # Filter fields (invisible, used to pass context to SelectCreateDialog)
-    filtro_fecha_inicio = fields.Char()
-    filtro_fecha_fin = fields.Char()
-    filtro_monto_min = fields.Float()
-    filtro_monto_max = fields.Float()
+    # Filter fields (invisible, passed via M2M context as search_default_*)
+    filtro_mes = fields.Date()
+    filtro_monto = fields.Float()
 
     @api.depends('costos_gastos_line_ids')
     def _compute_conciliado(self):
@@ -46,22 +44,18 @@ class ConciliacionManualWizard(models.TransientModel):
     @api.model
     def default_get(self, fields_list):
         res = super().default_get(fields_list)
-        ctx = self.env.context
-        movimiento_id = ctx.get('default_movimiento_id')
+        movimiento_id = self.env.context.get('default_movimiento_id')
         if movimiento_id:
             mov = self.env['estado.cuenta.bancario.line'].browse(movimiento_id)
             res['costos_gastos_line_ids'] = [
                 (6, 0, mov.costos_gastos_line_ids.ids)
             ]
-        # Propagate filter values from action context to wizard fields
-        if ctx.get('conciliacion_fecha_inicio'):
-            res['filtro_fecha_inicio'] = ctx['conciliacion_fecha_inicio']
-        if ctx.get('conciliacion_fecha_fin'):
-            res['filtro_fecha_fin'] = ctx['conciliacion_fecha_fin']
-        if ctx.get('conciliacion_monto_min') is not None:
-            res['filtro_monto_min'] = ctx.get('conciliacion_monto_min', 0)
-        if ctx.get('conciliacion_monto_max'):
-            res['filtro_monto_max'] = ctx['conciliacion_monto_max']
+            # Set filter values from the bank movement
+            if mov.mes_estado_cuenta:
+                res['filtro_mes'] = mov.mes_estado_cuenta
+            monto = mov.retiro if mov.retiro > 0 else mov.deposito
+            if monto:
+                res['filtro_monto'] = monto
         return res
 
     @api.model
