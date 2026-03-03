@@ -153,13 +153,7 @@
                 <field name="control_interno_id"/>
                 <field name="proveedor_text"/>
                 <field name="concepto"/>
-                <separator/>
-                <filter string="Mes del Estado de Cuenta" name="filter_mes_conciliacion"
-                        domain="[('fecha_pago', '&gt;=', context.get('conciliacion_fecha_inicio', '2000-01-01')),
-                                 ('fecha_pago', '&lt;=', context.get('conciliacion_fecha_fin', '2099-12-31'))]"/>
-                <filter string="Monto ±10" name="filter_monto_conciliacion"
-                        domain="[('total', '&gt;=', context.get('conciliacion_monto_min', 0)),
-                                 ('total', '&lt;=', context.get('conciliacion_monto_max', 99999999))]"/>
+                <field name="total"/>
                 <separator/>
                 <filter string="Fecha de Pago" name="filter_fecha_pago" domain="[]" context="{'group_by':'fecha_pago'}"/>
                 <filter string="Fecha de Comprobante" name="filter_fecha_comprobante" domain="[]" context="{'group_by':'fecha_comprobante'}"/>

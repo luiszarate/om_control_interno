@@ -191,12 +191,10 @@
                     <field name="filtro_monto_min" invisible="1"/>
                     <field name="filtro_monto_max" invisible="1"/>
                     <field name="costos_gastos_line_ids"
-                           context="{'search_default_filter_mes_conciliacion': 1,
-                                     'search_default_filter_monto_conciliacion': 1,
-                                     'conciliacion_fecha_inicio': filtro_fecha_inicio,
-                                     'conciliacion_fecha_fin': filtro_fecha_fin,
-                                     'conciliacion_monto_min': filtro_monto_min,
-                                     'conciliacion_monto_max': filtro_monto_max}">
+                           domain="[('fecha_pago', '&gt;=', filtro_fecha_inicio or '2000-01-01'),
+                                    ('fecha_pago', '&lt;=', filtro_fecha_fin or '2099-12-31'),
+                                    ('total', '&gt;=', filtro_monto_min or 0),
+                                    ('total', '&lt;=', filtro_monto_max or 99999999)]">
                         <tree>
                             <field name="control_interno_id"/>
                             <field name="fecha_pago"/>

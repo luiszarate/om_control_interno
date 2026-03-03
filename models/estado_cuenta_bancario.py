@@ -182,11 +182,8 @@ class EstadoCuentaBancarioLine(models.Model):
         monto = self.retiro if self.retiro > 0 else self.deposito
         ctx = {
             'default_movimiento_id': self.id,
-            # Pre-activate search filters in the "Add" popup
-            'search_default_filter_mes_conciliacion': 1,
-            'search_default_filter_monto_conciliacion': 1,
         }
-        # Month range for the search filter
+        # Month range for the M2M domain filter
         mes = self.mes_estado_cuenta
         if mes:
             ctx['conciliacion_fecha_inicio'] = mes.replace(day=1).isoformat()
@@ -197,7 +194,7 @@ class EstadoCuentaBancarioLine(models.Model):
             ctx['conciliacion_fecha_fin'] = (
                 next_month - timedelta(days=1)
             ).isoformat()
-        # Amount range (±10 pesos) for the search filter
+        # Amount range (±10 pesos) for the M2M domain filter
         if monto:
             ctx['conciliacion_monto_min'] = max(0, monto - 10.0)
             ctx['conciliacion_monto_max'] = monto + 10.0
