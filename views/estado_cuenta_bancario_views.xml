@@ -31,6 +31,9 @@
                         <button class="oe_stat_button" icon="fa-check-circle"
                                 name="action_auto_conciliar" type="object"
                                 string="Conciliar Automáticamente"/>
+                        <button class="oe_stat_button" icon="fa-refresh"
+                                name="action_sync_purchase_orders" type="object"
+                                string="Sincronizar OC"/>
                     </div>
                     <group>
                         <group>
@@ -192,9 +195,8 @@
                     <field name="filtro_mes" invisible="1"/>
                     <field name="filtro_monto" invisible="1"/>
                     <field name="costos_gastos_line_ids"
-                           context="{'search_default_filter_mes_conciliacion': filtro_mes and 1 or 0,
+                           context="{'search_default_mes': filtro_mes,
                                      'search_default_filter_monto_conciliacion': filtro_monto and 1 or 0,
-                                     'conciliacion_mes': filtro_mes,
                                      'conciliacion_monto': filtro_monto}">
                         <tree>
                             <field name="control_interno_id"/>

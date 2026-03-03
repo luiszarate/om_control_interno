@@ -157,8 +157,6 @@
                 <field name="total"
                        filter_domain="[('total', '&gt;=', self - 10), ('total', '&lt;=', self + 10)]"/>
                 <separator/>
-                <filter string="Mes del Estado de Cuenta" name="filter_mes_conciliacion"
-                        domain="[('mes', '=', context.get('conciliacion_mes', False))]"/>
                 <filter string="Total ±10" name="filter_monto_conciliacion"
                         domain="[('total', '&gt;=', context.get('conciliacion_monto', 0) - 10),
                                  ('total', '&lt;=', context.get('conciliacion_monto', 0) + 10)]"/>
