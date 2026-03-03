@@ -60,6 +60,7 @@
                                     <field name="saldo"/>
                                     <field name="observaciones"/>
                                     <field name="costos_gastos_count" string="# CI"/>
+                                    <field name="purchase_order_ids" widget="many2many_tags" optional="show"/>
                                     <button name="action_open_conciliacion" type="object"
                                             string="Conciliar" icon="fa-link"
                                             class="oe_highlight"/>
@@ -131,6 +132,8 @@
                     <group>
                         <field name="observaciones"/>
                     </group>
+                    <separator string="Órdenes de Compra"/>
+                    <field name="purchase_order_ids" widget="many2many_tags"/>
                     <separator string="Líneas de Control Interno Relacionadas"/>
                     <field name="mes_estado_cuenta" invisible="1"/>
                     <field name="costos_gastos_line_ids" widget="many2many_tags"
@@ -189,8 +192,10 @@
                     <field name="filtro_mes" invisible="1"/>
                     <field name="filtro_monto" invisible="1"/>
                     <field name="costos_gastos_line_ids"
-                           context="{'search_default_mes': filtro_mes,
-                                     'search_default_total': filtro_monto}">
+                           context="{'search_default_filter_mes_conciliacion': filtro_mes and 1 or 0,
+                                     'search_default_filter_monto_conciliacion': filtro_monto and 1 or 0,
+                                     'conciliacion_mes': filtro_mes,
+                                     'conciliacion_monto': filtro_monto}">
                         <tree>
                             <field name="control_interno_id"/>
                             <field name="fecha_pago"/>
@@ -229,6 +234,7 @@
                 <field name="observaciones"/>
                 <field name="conciliado"/>
                 <field name="costos_gastos_count" string="# CI"/>
+                <field name="purchase_order_ids" widget="many2many_tags"/>
             </tree>
         </field>
     </record>
