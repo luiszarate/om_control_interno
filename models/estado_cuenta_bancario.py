@@ -113,6 +113,8 @@ class EstadoCuentaBancario(models.Model):
 
             if len(candidates) == 1:
                 mov.costos_gastos_line_ids = [(4, candidates.id)]
+                if candidates.orden_compra_id:
+                    mov.purchase_order_ids = [(4, candidates.orden_compra_id.id)]
                 matched += 1
             else:
                 skipped += 1
@@ -153,6 +155,13 @@ class EstadoCuentaBancarioLine(models.Model):
         'estado_cuenta_line_id',
         'costos_gastos_line_id',
         string='Líneas de Control Interno',
+    )
+    purchase_order_ids = fields.Many2many(
+        'purchase.order',
+        'estado_cuenta_line_purchase_order_rel',
+        'estado_cuenta_line_id',
+        'purchase_order_id',
+        string='Órdenes de Compra',
     )
     conciliado = fields.Boolean(
         string='Conciliado',

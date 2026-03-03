@@ -76,11 +76,16 @@ class ConciliacionManualWizard(models.TransientModel):
         """Write the wizard M2M values to the real bank movement."""
         for rec in self:
             if rec.movimiento_id:
-                rec.movimiento_id.sudo().write({
+                lines = rec.costos_gastos_line_ids
+                po_ids = lines.mapped('orden_compra_id').ids
+                vals = {
                     'costos_gastos_line_ids': [
-                        (6, 0, rec.costos_gastos_line_ids.ids)
+                        (6, 0, lines.ids)
                     ],
-                })
+                }
+                if po_ids:
+                    vals['purchase_order_ids'] = [(6, 0, po_ids)]
+                rec.movimiento_id.sudo().write(vals)
 
     def action_confirmar(self):
         """Ensure save and close the dialog."""
