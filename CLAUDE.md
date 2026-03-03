@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Module Overview
 
-**om_control_interno** is a custom Odoo 14 module for Mexican companies to manage internal invoice control. It tracks monthly costs/expenses, imports CFDI XML invoices, links them to purchase orders, and classifies them with chart-of-accounts entries using an intelligent suggestion algorithm.
+**om_control_interno** is a custom Odoo 14 module for Mexican companies to manage internal invoice control. It tracks monthly costs/expenses, imports CFDI XML invoices, links them to purchase orders, classifies them with chart-of-accounts entries using an intelligent suggestion algorithm, reconciles expense lines with bank statement movements, and exports reconciliation data to CSV.
 
 **Dependencies:** `account`, `purchase` (Odoo core modules)
 
@@ -31,6 +31,13 @@ Control Interno Mensual → costos_gastos_line.py → catalogo_cuentas.py
                                 ↓
                     Account suggestion algorithm
                     (scores historical matches)
+
+Estado de Cuenta Bancario → movimiento_ids (EstadoCuentaBancarioLine)
+(bank statement)                ↓                        ↓
+                   costos_gastos_line_ids         purchase_order_ids
+                   (manual/auto reconciliation)   (auto from CI lines)
+                                ↓
+                   CSV Export (export wizard)
 ```
 
 ### Key Models
@@ -42,6 +49,8 @@ Control Interno Mensual → costos_gastos_line.py → catalogo_cuentas.py
 | `factura.xml` | `models/factura_xml.py` | Imported CFDI invoice; unique by UUID |
 | `catalogo.cuentas` | `models/catalogo_cuentas.py` | Searchable chart of accounts; formatted as "[number] name" |
 | `purchase.order` | `models/purchase_order.py` | Extended with `control_interno` boolean flag |
+| `estado.cuenta.bancario` | `models/estado_cuenta_bancario.py` | Bank statement record per period; contains all movements and reconciliation state |
+| `estado.cuenta.bancario.line` | `models/estado_cuenta_bancario.py` | Individual bank movement line; links to expense lines and purchase orders |
 
 ### Wizard Models (all transient)
 
@@ -50,6 +59,8 @@ Control Interno Mensual → costos_gastos_line.py → catalogo_cuentas.py
 - `costos.gastos.line.wizard` — Confirm loading data from a purchase order into an expense line
 - `catalogo.cuentas.import.wizard` — Import chart of accounts from CSV
 - `control.interno.import.wizard` — Import full control interno data from CSV with flexible column mapping
+- `conciliacion.manual.wizard` — Manually reconcile a bank movement with one or more expense lines; also syncs linked purchase orders
+- `estado.cuenta.bancario.export.wizard` — Export selected bank statements to a CSV file with reconciliation data
 
 ### JavaScript Widgets
 
@@ -82,6 +93,43 @@ Results stored in `suggested_cuenta_ids` (M2M), `suggested_cuenta_selection` (se
 - Date within 7 days: **+1 point**
 - Same month/year: **+2 points**
 - Minimum threshold: **4 points**
+
+### Bank Statement Reconciliation (`estado_cuenta_bancario.py`)
+
+`action_auto_conciliar()` matches bank movements to expense lines by comparing amounts:
+- Finds `costos.gastos.line` records with the same `importe_mn` as `mov.retiro` or `mov.deposito`
+- Only matches lines with `tipo_pago = 'transferencia'` that are not already reconciled
+- Single candidate → auto-assigns and syncs `purchase_order_ids` from `orden_compra_id`
+- Multiple candidates → skips (user must reconcile manually via `conciliacion.manual.wizard`)
+
+`action_sync_purchase_orders()` bulk-syncs purchase orders from already-reconciled lines:
+- Iterates all `movimiento_ids`, reads `costos_gastos_line_ids.mapped('orden_compra_id')`
+- Writes result to `mov.purchase_order_ids` — useful after initial reconciliation when POs were not yet linked
+
+**Search filter approach in reconciliation dialog:**
+- `mes` field uses `search_default_mes` context key (field facet, removable, confirmed working)
+- `total` filter uses a `<filter>` with `context.get('conciliacion_monto')` domain (Filters dropdown, confirmed working for Float values)
+- The M2M field context passes both values: `{'search_default_mes': filtro_mes, 'conciliacion_monto': filtro_monto, 'search_default_filter_monto_conciliacion': filtro_monto and 1 or 0}`
+
+### CSV Export (`estado_cuenta_bancario_export_wizard.py`)
+
+Selected from the bank statement list view via `ir.actions.server` (Action menu). Generates a CSV with these columns:
+
+| Column | Source |
+|--------|--------|
+| Fecha de compra | `fecha_pago` from linked `costos.gastos.line`; fallback to `mov.fecha` |
+| Etapa | User-entered text in wizard |
+| Descripción | Concatenated `concepto` fields from linked expense lines (pipe-separated) |
+| Monto | `retiro` if non-zero, else `deposito` |
+| Fecha en estado de cuenta | `mov.fecha` |
+| Retiro | `mov.retiro` |
+| Depósito | `mov.deposito` |
+| Saldo | `mov.saldo` |
+| Diferencia | Negative of `retiro`, or positive `deposito` |
+| Observaciones | Always blank |
+| Órdenes de compra relacionadas | Names of `purchase_order_ids` (comma-separated) |
+
+File is encoded as UTF-8 BOM (`utf-8-sig`) for Excel compatibility and returned as `ir.actions.act_url` download.
 
 ## Important Conventions
 

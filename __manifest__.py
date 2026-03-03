@@ -17,6 +17,7 @@
         'views/catalogo_cuentas_import_wizard_views.xml',
         'views/control_interno_import_wizard_views.xml',
         'views/estado_cuenta_bancario_views.xml',
+        'views/estado_cuenta_bancario_export_wizard_views.xml',
         'views/control_interno_menus.xml',
     ],
     'installable': True,
