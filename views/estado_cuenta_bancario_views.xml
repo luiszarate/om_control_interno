@@ -196,7 +196,8 @@
                     <field name="filtro_monto" invisible="1"/>
                     <field name="costos_gastos_line_ids"
                            context="{'search_default_mes': filtro_mes,
-                                     'search_default_total': filtro_monto}">
+                                     'search_default_filter_monto_conciliacion': filtro_monto and 1 or 0,
+                                     'conciliacion_monto': filtro_monto}">
                         <tree>
                             <field name="control_interno_id"/>
                             <field name="fecha_pago"/>
