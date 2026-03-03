@@ -78,6 +78,28 @@ class EstadoCuentaBancario(models.Model):
             },
         }
 
+    def action_sync_purchase_orders(self):
+        """Sync purchase orders from reconciled expense lines for all movements."""
+        self.ensure_one()
+        synced = 0
+        for mov in self.movimiento_ids:
+            if not mov.costos_gastos_line_ids:
+                continue
+            po_ids = mov.costos_gastos_line_ids.mapped('orden_compra_id').ids
+            if po_ids:
+                mov.purchase_order_ids = [(6, 0, po_ids)]
+                synced += 1
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Sincronización de OC',
+                'message': f'Se sincronizaron órdenes de compra en {synced} movimientos.',
+                'type': 'info' if synced > 0 else 'warning',
+                'sticky': False,
+            },
+        }
+
     def action_auto_conciliar(self):
         """Auto-match bank movements with control interno lines.
 

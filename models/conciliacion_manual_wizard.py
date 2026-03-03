@@ -79,9 +79,7 @@ class ConciliacionManualWizard(models.TransientModel):
                 lines = rec.costos_gastos_line_ids
                 po_ids = lines.mapped('orden_compra_id').ids
                 vals = {
-                    'costos_gastos_line_ids': [
-                        (6, 0, lines.ids)
-                    ],
+                    'costos_gastos_line_ids': [(6, 0, lines.ids)],
                 }
                 if po_ids:
                     vals['purchase_order_ids'] = [(6, 0, po_ids)]
