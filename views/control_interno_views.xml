@@ -153,7 +153,9 @@
                 <field name="control_interno_id"/>
                 <field name="proveedor_text"/>
                 <field name="concepto"/>
-                <field name="total"/>
+                <field name="mes"/>
+                <field name="total"
+                       filter_domain="[('total', '&gt;=', self - 10), ('total', '&lt;=', self + 10)]"/>
                 <separator/>
                 <filter string="Fecha de Pago" name="filter_fecha_pago" domain="[]" context="{'group_by':'fecha_pago'}"/>
                 <filter string="Fecha de Comprobante" name="filter_fecha_comprobante" domain="[]" context="{'group_by':'fecha_comprobante'}"/>
