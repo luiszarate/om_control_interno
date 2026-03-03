@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ==================== -->
+    <!-- Export Wizard Form   -->
+    <!-- ==================== -->
+
+    <record id="view_estado_cuenta_bancario_export_wizard_form" model="ir.ui.view">
+        <field name="name">estado.cuenta.bancario.export.wizard.form</field>
+        <field name="model">estado.cuenta.bancario.export.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Exportar Movimientos a CSV">
+                <group>
+                    <field name="estado_cuenta_ids" widget="many2many_tags" readonly="1"/>
+                    <field name="etapa" placeholder="Ej. Aprobado, Revisión, Cierre..."/>
+                </group>
+                <footer>
+                    <button name="action_export" type="object"
+                            string="Exportar CSV" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- ==================== -->
+    <!-- Server Action        -->
+    <!-- ==================== -->
+
+    <record id="action_export_movimientos_banco" model="ir.actions.server">
+        <field name="name">Exportar Movimientos a CSV</field>
+        <field name="model_id" ref="model_estado_cuenta_bancario"/>
+        <field name="binding_model_id" ref="model_estado_cuenta_bancario"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">
+if records:
+    action = {
+        'type': 'ir.actions.act_window',
+        'name': 'Exportar Movimientos',
+        'res_model': 'estado.cuenta.bancario.export.wizard',
+        'view_mode': 'form',
+        'target': 'new',
+        'context': {'active_ids': records.ids},
+    }
+        </field>
+    </record>
+
+</odoo>
