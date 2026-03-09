@@ -141,6 +141,35 @@ class EstadoCuentaBancario(models.Model):
             else:
                 skipped += 1
 
+        # Second pass: match movements without fecha_pago by same month + amount
+        for mov in self.movimiento_ids:
+            if mov.costos_gastos_line_ids:
+                continue  # already matched (including from first pass)
+
+            monto = mov.retiro if mov.retiro > 0 else mov.deposito
+            if not monto or not mov.fecha:
+                continue
+
+            domain = [
+                ('fecha_pago', '=', False),
+                ('mes', '=', self.mes),
+                ('total', '>=', monto - 0.01),
+                ('total', '<=', monto + 0.01),
+            ]
+            candidates = self.env['costos.gastos.line'].search(domain)
+            candidates = candidates.filtered(
+                lambda c: not c.movimiento_bancario_ids
+            )
+
+            if len(candidates) == 1:
+                mov.costos_gastos_line_ids = [(4, candidates.id)]
+                candidates.fecha_pago = mov.fecha
+                if candidates.orden_compra_id:
+                    mov.purchase_order_ids = [(4, candidates.orden_compra_id.id)]
+                matched += 1
+            else:
+                skipped += 1
+
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
