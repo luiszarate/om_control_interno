@@ -84,6 +84,11 @@ class ConciliacionManualWizard(models.TransientModel):
                 if po_ids:
                     vals['purchase_order_ids'] = [(6, 0, po_ids)]
                 rec.movimiento_id.sudo().write(vals)
+                # Set fecha_pago on lines that don't have one
+                if rec.movimiento_id.fecha:
+                    for line in lines:
+                        if not line.fecha_pago:
+                            line.fecha_pago = rec.movimiento_id.fecha
 
     def action_confirmar(self):
         """Ensure save and close the dialog."""
