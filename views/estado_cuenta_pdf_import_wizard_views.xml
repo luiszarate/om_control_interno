@@ -15,8 +15,9 @@
                     <field name="auto_crear_cuenta"/>
                     <field name="estado_cuenta_id" invisible="1"/>
                     <field name="forzar_reemplazo"
-                           attrs="{'invisible': [('estados_existentes_ids', '=', [])]}"/>
+                           attrs="{'invisible': [('tiene_conflictos', '=', False)]}"/>
                     <field name="estados_existentes_ids" invisible="1"/>
+                    <field name="tiene_conflictos" invisible="1"/>
                 </group>
                 <div attrs="{'invisible': [('mensaje_aviso', '=', False)]}"
                      class="alert alert-warning" role="alert">
@@ -25,14 +26,14 @@
                 <footer>
                     <button name="action_import" type="object"
                             string="Importar" class="btn-primary"
-                            attrs="{'invisible': [('estados_existentes_ids', '!=', [])]}"/>
+                            attrs="{'invisible': [('tiene_conflictos', '=', True)]}"/>
                     <button name="action_borrar_y_reimportar" type="object"
                             string="Borrar y Reimportar" class="btn-danger"
-                            attrs="{'invisible': [('estados_existentes_ids', '=', [])]}"
+                            attrs="{'invisible': [('tiene_conflictos', '=', False)]}"
                             confirm="Esto borrará todos los movimientos de los estados de cuenta conflictivos. ¿Continuar?"/>
                     <button name="action_abrir_existente" type="object"
                             string="Abrir Existentes" class="btn-secondary"
-                            attrs="{'invisible': [('estados_existentes_ids', '=', [])]}"/>
+                            attrs="{'invisible': [('tiene_conflictos', '=', False)]}"/>
                     <button string="Cancelar" class="btn-secondary" special="cancel"/>
                 </footer>
             </form>

@@ -45,8 +45,15 @@ class EstadoCuentaPdfImportWizard(models.TransientModel):
     )
     estados_existentes_ids = fields.Many2many(
         'estado.cuenta.bancario',
+        'pdf_import_wizard_estado_conflict_rel',
+        'wizard_id',
+        'estado_id',
         string='Estados de Cuenta Existentes',
         readonly=True,
+    )
+    tiene_conflictos = fields.Boolean(
+        string='Tiene Conflictos',
+        compute='_compute_tiene_conflictos',
     )
     mensaje_aviso = fields.Text(string='Aviso', readonly=True)
     bank_code = fields.Selection(
@@ -58,6 +65,11 @@ class EstadoCuentaPdfImportWizard(models.TransientModel):
         required=True,
         help='Banco emisor del PDF. Determina el parser usado.',
     )
+
+    @api.depends('estados_existentes_ids')
+    def _compute_tiene_conflictos(self):
+        for rec in self:
+            rec.tiene_conflictos = bool(rec.estados_existentes_ids)
 
     def _get_parser(self, bank_code: str):
         parser = parsers_base.get_parser(bank_code)
