@@ -14,6 +14,8 @@
     <menuitem id="menu_import_catalogo_cuentas" name="Importar Catálogo de Cuentas" parent="menu_catalogo_cuentas" action="action_catalogo_cuentas_import_wizard"/>
 
     <menuitem id="menu_estados_cuenta" name="Estados de Cuenta Bancarios" parent="menu_control_interno"/>
-    <menuitem id="menu_ver_estados_cuenta" name="Ver Estados de Cuenta" parent="menu_estados_cuenta" action="action_estado_cuenta_bancario"/>
-    <menuitem id="menu_ver_movimientos_bancarios" name="Ver Movimientos" parent="menu_estados_cuenta" action="action_estado_cuenta_bancario_line"/>
+    <menuitem id="menu_cuentas_bancarias" name="Cuentas Bancarias" parent="menu_estados_cuenta" action="action_cuenta_bancaria" sequence="5"/>
+    <menuitem id="menu_ver_estados_cuenta" name="Ver Estados de Cuenta" parent="menu_estados_cuenta" action="action_estado_cuenta_bancario" sequence="10"/>
+    <menuitem id="menu_ver_movimientos_bancarios" name="Ver Movimientos" parent="menu_estados_cuenta" action="action_estado_cuenta_bancario_line" sequence="20"/>
+    <menuitem id="menu_importar_pdf_estado_cuenta" name="Importar Estado de Cuenta PDF" parent="menu_estados_cuenta" action="action_estado_cuenta_pdf_import_wizard" sequence="30"/>
 </odoo>

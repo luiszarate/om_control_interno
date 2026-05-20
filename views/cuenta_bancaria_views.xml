@@ -1,0 +1,82 @@
+<odoo>
+
+    <record id="view_cuenta_bancaria_tree" model="ir.ui.view">
+        <field name="name">cuenta.bancaria.tree</field>
+        <field name="model">cuenta.bancaria</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="numero_cuenta"/>
+                <field name="name"/>
+                <field name="banco"/>
+                <field name="clabe"/>
+                <field name="moneda_id"/>
+                <field name="estado_cuenta_count"/>
+                <field name="activo"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_cuenta_bancaria_form" model="ir.ui.view">
+        <field name="name">cuenta.bancaria.form</field>
+        <field name="model">cuenta.bancaria</field>
+        <field name="arch" type="xml">
+            <form string="Cuenta Bancaria">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="numero_cuenta"/>
+                            <field name="banco"/>
+                        </group>
+                        <group>
+                            <field name="clabe"/>
+                            <field name="moneda_id"/>
+                            <field name="activo"/>
+                            <field name="estado_cuenta_count"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="notas"/>
+                    </group>
+                    <notebook>
+                        <page string="Estados de Cuenta">
+                            <field name="estado_cuenta_ids">
+                                <tree>
+                                    <field name="mes"/>
+                                    <field name="movimiento_count"/>
+                                    <field name="conciliados_count"/>
+                                    <field name="pendientes_count"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_cuenta_bancaria_search" model="ir.ui.view">
+        <field name="name">cuenta.bancaria.search</field>
+        <field name="model">cuenta.bancaria</field>
+        <field name="arch" type="xml">
+            <search string="Cuentas Bancarias">
+                <field name="numero_cuenta"/>
+                <field name="name"/>
+                <field name="banco"/>
+                <filter string="Activas" name="filter_activas" domain="[('activo', '=', True)]"/>
+                <filter string="Inactivas" name="filter_inactivas" domain="[('activo', '=', False)]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter string="Banco" name="group_banco" context="{'group_by': 'banco'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_cuenta_bancaria" model="ir.actions.act_window">
+        <field name="name">Cuentas Bancarias</field>
+        <field name="res_model">cuenta.bancaria</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_cuenta_bancaria_search"/>
+    </record>
+
+</odoo>

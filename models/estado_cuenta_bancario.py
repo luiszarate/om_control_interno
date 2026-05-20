@@ -14,7 +14,19 @@ class EstadoCuentaBancario(models.Model):
         compute='_compute_name',
         store=True,
     )
-    numero_cuenta = fields.Char(string='Número de Cuenta', required=True)
+    cuenta_bancaria_id = fields.Many2one(
+        'cuenta.bancaria',
+        string='Cuenta Bancaria',
+        required=True,
+        ondelete='restrict',
+        index=True,
+    )
+    numero_cuenta = fields.Char(
+        string='Número de Cuenta',
+        related='cuenta_bancaria_id.numero_cuenta',
+        store=True,
+        readonly=True,
+    )
     mes = fields.Date(string='Mes', required=True)
     movimiento_ids = fields.One2many(
         'estado.cuenta.bancario.line',
@@ -35,11 +47,11 @@ class EstadoCuentaBancario(models.Model):
     )
 
     _sql_constraints = [
-        ('unique_cuenta_mes', 'unique(numero_cuenta, mes)',
+        ('unique_cuenta_mes', 'unique(cuenta_bancaria_id, mes)',
          'Ya existe un estado de cuenta para esta cuenta y mes.'),
     ]
 
-    @api.depends('numero_cuenta', 'mes')
+    @api.depends('cuenta_bancaria_id', 'numero_cuenta', 'mes')
     def _compute_name(self):
         meses = {
             1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril',
@@ -76,6 +88,22 @@ class EstadoCuentaBancario(models.Model):
             'context': {
                 'default_estado_cuenta_id': self.id,
             },
+        }
+
+    def action_import_pdf(self):
+        ctx = {}
+        if self:
+            self.ensure_one()
+            ctx['default_estado_cuenta_id'] = self.id
+            if self.cuenta_bancaria_id:
+                ctx['default_cuenta_bancaria_id'] = self.cuenta_bancaria_id.id
+        return {
+            'name': 'Importar Movimientos desde Estado de Cuenta PDF',
+            'type': 'ir.actions.act_window',
+            'res_model': 'estado.cuenta.bancario.pdf.import.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': ctx,
         }
 
     def action_sync_purchase_orders(self):

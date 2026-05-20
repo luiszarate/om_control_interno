@@ -1,0 +1,48 @@
+<odoo>
+
+    <record id="view_estado_cuenta_pdf_import_wizard_form" model="ir.ui.view">
+        <field name="name">estado.cuenta.bancario.pdf.import.wizard.form</field>
+        <field name="model">estado.cuenta.bancario.pdf.import.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Importar Movimientos desde PDF">
+                <group>
+                    <field name="pdf_file" filename="filename"/>
+                    <field name="filename" invisible="1"/>
+                    <field name="cuenta_bancaria_id"
+                           options="{'no_create_edit': False}"
+                           help="Si se deja vacío, el parser intenta detectar la cuenta del PDF."/>
+                    <field name="auto_crear_cuenta"/>
+                    <field name="estado_cuenta_id" invisible="1"/>
+                    <field name="forzar_reemplazo"
+                           attrs="{'invisible': [('estado_existente_id', '=', False)]}"/>
+                    <field name="estado_existente_id" invisible="1"/>
+                </group>
+                <div attrs="{'invisible': [('estado_existente_id', '=', False)]}"
+                     class="alert alert-warning" role="alert">
+                    <field name="mensaje_aviso" nolabel="1" readonly="1"/>
+                </div>
+                <footer>
+                    <button name="action_import" type="object"
+                            string="Importar" class="btn-primary"
+                            attrs="{'invisible': [('estado_existente_id', '!=', False)]}"/>
+                    <button name="action_borrar_y_reimportar" type="object"
+                            string="Borrar y Reimportar" class="btn-danger"
+                            attrs="{'invisible': [('estado_existente_id', '=', False)]}"
+                            confirm="Esto borrará todos los movimientos del estado de cuenta existente. ¿Continuar?"/>
+                    <button name="action_abrir_existente" type="object"
+                            string="Abrir Estado Existente" class="btn-secondary"
+                            attrs="{'invisible': [('estado_existente_id', '=', False)]}"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_estado_cuenta_pdf_import_wizard" model="ir.actions.act_window">
+        <field name="name">Importar Movimientos desde PDF</field>
+        <field name="res_model">estado.cuenta.bancario.pdf.import.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+</odoo>

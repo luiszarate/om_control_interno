@@ -1,7 +1,7 @@
 #__manifest__.py
 {
     'name': 'Control Interno',
-    'version': '1.0',
+    'version': '14.0.1.1.0',
     'summary': 'Módulo para llevar un control interno de facturas',
     'author': 'Tu Nombre',
     'depends': ['account', 'purchase'],
@@ -16,10 +16,15 @@
         'views/purchase_order_inherit_views.xml',
         'views/catalogo_cuentas_import_wizard_views.xml',
         'views/control_interno_import_wizard_views.xml',
+        'views/cuenta_bancaria_views.xml',
         'views/estado_cuenta_bancario_views.xml',
         'views/estado_cuenta_bancario_export_wizard_views.xml',
+        'views/estado_cuenta_pdf_import_wizard_views.xml',
         'views/control_interno_menus.xml',
     ],
+    'external_dependencies': {
+        'python': ['pdfplumber'],
+    },
     'installable': True,
     'application': True,
 }

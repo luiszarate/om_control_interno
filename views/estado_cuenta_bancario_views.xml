@@ -11,6 +11,7 @@
         <field name="model">estado.cuenta.bancario</field>
         <field name="arch" type="xml">
             <tree>
+                <field name="cuenta_bancaria_id"/>
                 <field name="numero_cuenta"/>
                 <field name="mes"/>
                 <field name="movimiento_count"/>
@@ -37,7 +38,8 @@
                     </div>
                     <group>
                         <group>
-                            <field name="numero_cuenta"/>
+                            <field name="cuenta_bancaria_id" options="{'no_create_edit': False}"/>
+                            <field name="numero_cuenta" readonly="1"/>
                         </group>
                         <group>
                             <field name="mes"/>
@@ -74,6 +76,7 @@
                 </sheet>
                 <footer>
                     <button name="action_import_csv" type="object" string="Importar Movimientos desde CSV" class="btn-primary"/>
+                    <button name="action_import_pdf" type="object" string="Importar Movimientos desde Estado de Cuenta PDF" class="btn-primary"/>
                 </footer>
             </form>
         </field>
@@ -85,9 +88,11 @@
         <field name="model">estado.cuenta.bancario</field>
         <field name="arch" type="xml">
             <search string="Estado de Cuenta Bancario">
+                <field name="cuenta_bancaria_id"/>
                 <field name="numero_cuenta"/>
                 <field name="mes"/>
                 <group expand="0" string="Agrupar por">
+                    <filter string="Cuenta Bancaria" name="group_cuenta_bancaria" context="{'group_by': 'cuenta_bancaria_id'}"/>
                     <filter string="Número de Cuenta" name="group_cuenta" context="{'group_by': 'numero_cuenta'}"/>
                     <filter string="Mes" name="group_mes" context="{'group_by': 'mes:month'}"/>
                 </group>

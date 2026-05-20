@@ -9,8 +9,10 @@ from . import costos_gastos_line_wizard
 from . import purchase_order  # Add this line
 from . import catalogo_cuentas_import_wizard
 from . import control_interno_import_wizard
+from . import cuenta_bancaria
 from . import estado_cuenta_bancario
 from . import estado_cuenta_bancario_import_wizard
+from . import estado_cuenta_pdf_import_wizard
 from . import conciliacion_manual_wizard
 from . import estado_cuenta_bancario_export_wizard
 #from . import purchase_order_suggestion
