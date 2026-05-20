@@ -113,16 +113,9 @@ class BajioParser(BankStatementParser):
         try:
             import pdfplumber
         except ImportError as exc:
-            import sys
-            _logger.error(
-                "pdfplumber import failed: %s\nPython: %s\nsys.path:\n%s",
-                exc, sys.executable, '\n'.join(sys.path),
-            )
             raise RuntimeError(
-                "El paquete Python 'pdfplumber' no está instalado en el "
-                "entorno Python que ejecuta Odoo. Detalles del intérprete "
-                "registrados en el log del servidor.\n\n"
-                "Python ejecutándose: %s" % sys.executable
+                "El paquete Python 'pdfplumber' no está instalado. "
+                "Ejecute: pip install pdfplumber"
             ) from exc
 
         statements_by_account: dict = {}
