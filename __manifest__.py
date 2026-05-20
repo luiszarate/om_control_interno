@@ -22,9 +22,6 @@
         'views/estado_cuenta_pdf_import_wizard_views.xml',
         'views/control_interno_menus.xml',
     ],
-    'external_dependencies': {
-        'python': ['pdfplumber'],
-    },
     'installable': True,
     'application': True,
 }
