@@ -33,6 +33,21 @@ class EstadoCuentaBancario(models.Model):
         'estado_cuenta_id',
         string='Movimientos',
     )
+    filtro_movimientos = fields.Selection([
+        ('todos', 'Todos'),
+        ('ingresos', 'Solo Ingresos'),
+        ('egresos', 'Solo Egresos'),
+    ], string='Mostrar', default='todos', required=True)
+    ocultar_comisiones = fields.Boolean(
+        string='Ocultar Comisiones SPEI',
+        help='Oculta los movimientos de comisión por transferencia SPEI '
+             'y su IVA.',
+    )
+    movimiento_filtrado_ids = fields.Many2many(
+        'estado.cuenta.bancario.line',
+        string='Movimientos Filtrados',
+        compute='_compute_movimiento_filtrado_ids',
+    )
     movimiento_count = fields.Integer(
         string='No. Movimientos',
         compute='_compute_movimiento_count',
@@ -69,6 +84,20 @@ class EstadoCuentaBancario(models.Model):
     def _compute_movimiento_count(self):
         for rec in self:
             rec.movimiento_count = len(rec.movimiento_ids)
+
+    @api.depends('movimiento_ids', 'movimiento_ids.retiro',
+                 'movimiento_ids.deposito', 'movimiento_ids.es_comision_spei',
+                 'filtro_movimientos', 'ocultar_comisiones')
+    def _compute_movimiento_filtrado_ids(self):
+        for rec in self:
+            movs = rec.movimiento_ids
+            if rec.filtro_movimientos == 'ingresos':
+                movs = movs.filtered(lambda m: m.deposito)
+            elif rec.filtro_movimientos == 'egresos':
+                movs = movs.filtered(lambda m: m.retiro)
+            if rec.ocultar_comisiones:
+                movs = movs.filtered(lambda m: not m.es_comision_spei)
+            rec.movimiento_filtrado_ids = movs
 
     @api.depends('movimiento_ids.costos_gastos_line_ids')
     def _compute_conciliacion_counts(self):
@@ -256,12 +285,28 @@ class EstadoCuentaBancarioLine(models.Model):
         related='estado_cuenta_id.mes',
         store=True,
     )
+    es_comision_spei = fields.Boolean(
+        string='Comisión SPEI',
+        compute='_compute_es_comision_spei',
+        store=True,
+        help='Verdadero cuando la descripción corresponde a una comisión por '
+             'transferencia SPEI o su IVA, con o sin espacios intercalados.',
+    )
 
     @api.depends('costos_gastos_line_ids')
     def _compute_conciliado(self):
         for rec in self:
             rec.conciliado = bool(rec.costos_gastos_line_ids)
             rec.costos_gastos_count = len(rec.costos_gastos_line_ids)
+
+    @api.depends('descripcion')
+    def _compute_es_comision_spei(self):
+        # "IVA COMISION POR TRANSFERENCIA..." contains "COMISION POR
+        # TRANSFERENCIA...", so one pattern covers both descriptions.
+        patron = 'COMISIONPORTRANSFERENCIA-ENVIO;(SPEI;BANCAPORINTERNET)'
+        for rec in self:
+            normalizada = ''.join((rec.descripcion or '').upper().split())
+            rec.es_comision_spei = patron in normalizada
 
     def action_open_conciliacion(self):
         """Open the conciliation wizard for this bank movement."""

@@ -104,6 +104,14 @@ class CostosGastosLine(models.Model):
         string='Movimientos Bancarios',
     )
 
+    conciliacion_monto_match = fields.Boolean(
+        string='Total ±10 del movimiento',
+        compute='_compute_conciliacion_monto_match',
+        search='_search_conciliacion_monto_match',
+        help='Verdadero cuando el total está a ±10 del monto del movimiento '
+             'bancario pasado en el contexto (conciliacion_monto).',
+    )
+
     comentarios_imago = fields.Text(string='Comentarios Imago Aerospace')
     comentarios_contador = fields.Text(string='Comentarios Contador')
 
@@ -156,6 +164,38 @@ class CostosGastosLine(models.Model):
                 record.importe_mxn = importe_neto * tipo_cambio
             else:
                 record.importe_mxn = importe_neto
+
+    @api.depends('total')
+    @api.depends_context('conciliacion_monto')
+    def _compute_conciliacion_monto_match(self):
+        monto = self.env.context.get('conciliacion_monto')
+        for record in self:
+            record.conciliacion_monto_match = bool(monto) and abs(
+                (record.total or 0.0) - monto
+            ) <= 10
+
+    def _search_conciliacion_monto_match(self, operator, value):
+        """Server-side search for the 'Total ±10' reconciliation filter.
+
+        The target amount comes from the context (conciliacion_monto), set by
+        the M2M field in the conciliation wizard. Search view filter domains
+        are evaluated client-side where that context key is not available, so
+        the range comparison must happen here on the server.
+        """
+        monto = self.env.context.get('conciliacion_monto')
+        if not monto:
+            return []
+        positive = (operator == '=') == bool(value)
+        if positive:
+            return [
+                ('total', '>=', monto - 10),
+                ('total', '<=', monto + 10),
+            ]
+        return [
+            '|',
+            ('total', '<', monto - 10),
+            ('total', '>', monto + 10),
+        ]
 
     @api.onchange('orden_compra_id')
     def _onchange_orden_compra_id(self):
@@ -278,7 +318,7 @@ class CostosGastosLine(models.Model):
                 self.orden_compra_id = factura.ordenes_compra_ids[0]
                 self._load_data_from_purchase_order()
 
-    @api.onchange('importe', 'descuento', 'tipo_cambio', 'moneda_id')
+    @api.onchange('importe', 'descuento', 'tipo_cambio', 'moneda_id', 'iva')
     def _onchange_importe_mxn(self):
         if self.moneda_id and self.moneda_id.name != 'MXN':
             tipo_cambio = self.tipo_cambio or 1.0
@@ -286,6 +326,7 @@ class CostosGastosLine(models.Model):
             self.importe_mxn = importe_neto * tipo_cambio
         else:
             self.importe_mxn = (self.importe or 0.0) - (self.descuento or 0.0)
+        self.total = (self.importe_mxn or 0.0) + (self.iva or 0.0)
 
     @api.onchange('control_interno_id')
     def _onchange_control_interno_id(self):

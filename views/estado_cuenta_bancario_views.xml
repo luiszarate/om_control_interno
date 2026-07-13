@@ -55,8 +55,35 @@
                     </group>
                     <notebook>
                         <page string="Movimientos" name="movimientos">
-                            <field name="movimiento_ids">
+                            <group>
+                                <group>
+                                    <field name="filtro_movimientos" widget="radio"
+                                           options="{'horizontal': true}"/>
+                                </group>
+                                <group>
+                                    <field name="ocultar_comisiones" widget="boolean_toggle"/>
+                                </group>
+                            </group>
+                            <field name="movimiento_ids"
+                                   attrs="{'invisible': ['|', ('filtro_movimientos', '!=', 'todos'), ('ocultar_comisiones', '=', True)]}">
                                 <tree editable="bottom" decoration-success="conciliado == True" decoration-muted="conciliado == False">
+                                    <field name="conciliado" invisible="1"/>
+                                    <field name="fecha"/>
+                                    <field name="descripcion"/>
+                                    <field name="retiro"/>
+                                    <field name="deposito"/>
+                                    <field name="saldo"/>
+                                    <field name="observaciones"/>
+                                    <field name="costos_gastos_count" string="# CI"/>
+                                    <field name="purchase_order_ids" widget="many2many_tags" optional="show"/>
+                                    <button name="action_open_conciliacion" type="object"
+                                            string="Conciliar" icon="fa-link"
+                                            class="oe_highlight"/>
+                                </tree>
+                            </field>
+                            <field name="movimiento_filtrado_ids" readonly="1" nolabel="1"
+                                   attrs="{'invisible': [('filtro_movimientos', '=', 'todos'), ('ocultar_comisiones', '=', False)]}">
+                                <tree decoration-success="conciliado == True" decoration-muted="conciliado == False">
                                     <field name="conciliado" invisible="1"/>
                                     <field name="fecha"/>
                                     <field name="descripcion"/>
@@ -257,6 +284,11 @@
                 <field name="descripcion"/>
                 <filter string="Conciliados" name="filter_conciliados" domain="[('conciliado', '=', True)]"/>
                 <filter string="Pendientes" name="filter_pendientes" domain="[('conciliado', '=', False)]"/>
+                <separator/>
+                <filter string="Solo Ingresos" name="filter_ingresos" domain="[('deposito', '&gt;', 0)]"/>
+                <filter string="Solo Egresos" name="filter_egresos" domain="[('retiro', '&gt;', 0)]"/>
+                <separator/>
+                <filter string="Ocultar Comisiones SPEI" name="filter_sin_comisiones" domain="[('es_comision_spei', '=', False)]"/>
                 <separator/>
                 <group expand="0" string="Agrupar por">
                     <filter string="Estado de Cuenta" name="group_estado" context="{'group_by': 'estado_cuenta_id'}"/>
