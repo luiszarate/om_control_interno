@@ -106,9 +106,14 @@ Results stored in `suggested_cuenta_ids` (M2M), `suggested_cuenta_selection` (se
 - Iterates all `movimiento_ids`, reads `costos_gastos_line_ids.mapped('orden_compra_id')`
 - Writes result to `mov.purchase_order_ids` — useful after initial reconciliation when POs were not yet linked
 
+**Movement display filters (statement form view):**
+- `filtro_movimientos` (todos/ingresos/egresos, radio) and `ocultar_comisiones` (boolean toggle) on `estado.cuenta.bancario` drive the computed M2M `movimiento_filtrado_ids`, shown read-only in place of the editable `movimiento_ids` list whenever a filter is active
+- `es_comision_spei` is a stored computed boolean on the line that detects SPEI transfer-fee (and its IVA) descriptions by comparing the description with all whitespace removed, so it matches regardless of interleaved spaces
+- The standalone movements list exposes the same criteria as search filters (`Solo Ingresos`, `Solo Egresos`, `Ocultar Comisiones SPEI`)
+
 **Search filter approach in reconciliation dialog:**
 - `mes` field uses `search_default_mes` context key (field facet, removable, confirmed working)
-- `total` filter uses a `<filter>` with `context.get('conciliacion_monto')` domain (Filters dropdown, confirmed working for Float values)
+- `total` filter (`Total ±10`) uses the searchable computed field `conciliacion_monto_match` on `costos.gastos.line`; its `_search_conciliacion_monto_match()` reads `conciliacion_monto` from the context server-side. Do NOT use `context.get()` inside the `<filter>` domain — search view filter domains are evaluated client-side where that context key is unavailable, so the filter silently compares against 0.
 - The M2M field context passes both values: `{'search_default_mes': filtro_mes, 'conciliacion_monto': filtro_monto, 'search_default_filter_monto_conciliacion': filtro_monto and 1 or 0}`
 
 ### CSV Export (`estado_cuenta_bancario_export_wizard.py`)

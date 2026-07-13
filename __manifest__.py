@@ -1,7 +1,7 @@
 #__manifest__.py
 {
     'name': 'Control Interno',
-    'version': '14.0.1.1.0',
+    'version': '14.0.1.2.0',
     'summary': 'Módulo para llevar un control interno de facturas',
     'author': 'Tu Nombre',
     'depends': ['account', 'purchase'],
