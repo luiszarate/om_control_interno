@@ -5,10 +5,11 @@
         <field name="name">catalogo.cuentas.tree</field>
         <field name="model">catalogo.cuentas</field>
         <field name="arch" type="xml">
-            <tree string="Catálogo de Cuentas">
+            <tree string="Catálogo de Cuentas" default_order="usage_count desc, numero_cuenta">
                 <field name="numero_cuenta"/>
                 <field name="nombre_cuenta"/>
                 <field name="descripcion"/>
+                <field name="usage_count"/>
             </tree>
         </field>
     </record>
